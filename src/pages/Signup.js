@@ -3,44 +3,34 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import React from "react";
 
-function Login() {
+function Register() {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match!");
+      return;
+    }
+
     axios
-      .post("http://localhost:3001/login", { email, password })
+      .post("http://localhost:3001/register", { email, name, password })
       .then((result) => {
         console.log(result);
-      
-        if (result.data && result.data.message === "Login successful") {
-          // Store the token
-          localStorage.setItem("token", result.data.token);
-      
-          // **Store the userId**:
-          // Make sure your backend actually sends "user": {...} with an "id" or "_id"
-          localStorage.setItem("userId", result.data.user.id);
-
-          // Store userName
-          localStorage.setItem("userName", result.data.user.name);
-      
-          // Navigate to Home
-          navigate("/home");
-        } else {
-          setErrorMessage("Invalid credentials or unexpected response!");
-        }
+        // After successful registration, navigate to login
+        navigate("/login");
       })
-      
       .catch((err) => {
-        // If there's an error from the server, display it
         if (err.response && err.response.data.message) {
           setErrorMessage(err.response.data.message);
         } else {
-          setErrorMessage("Invalid email or password!");
+          setErrorMessage("Error occurred during registration!");
         }
       });
   };
@@ -71,7 +61,7 @@ function Login() {
       React.createElement(
         "h2",
         { style: { textAlign: "center", marginBottom: "20px" } },
-        "Login"
+        "Register"
       ),
 
       errorMessage &&
@@ -113,6 +103,30 @@ function Login() {
           { style: { marginBottom: "15px" } },
           React.createElement(
             "label",
+            { htmlFor: "email", style: { display: "block" } },
+            "Name"
+          ),
+          React.createElement("input", {
+            type: "name",
+            placeholder: "Enter Name: ",
+            autoComplete: "off",
+            name: "name",
+            style: {
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              fontSize: "14px",
+            },
+            onChange: (e) => setName(e.target.value),
+          })
+        ),
+
+        React.createElement(
+          "div",
+          { style: { marginBottom: "15px" } },
+          React.createElement(
+            "label",
             { htmlFor: "password", style: { display: "block" } },
             "Password"
           ),
@@ -132,6 +146,29 @@ function Login() {
         ),
 
         React.createElement(
+          "div",
+          { style: { marginBottom: "15px" } },
+          React.createElement(
+            "label",
+            { htmlFor: "confirmPassword", style: { display: "block" } },
+            "Confirm Password"
+          ),
+          React.createElement("input", {
+            type: "password",
+            placeholder: "Confirm Password",
+            name: "confirmPassword",
+            style: {
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              fontSize: "14px",
+            },
+            onChange: (e) => setConfirmPassword(e.target.value),
+          })
+        ),
+
+        React.createElement(
           "button",
           {
             type: "submit",
@@ -145,19 +182,19 @@ function Login() {
               cursor: "pointer",
             },
           },
-          "Login"
+          "Register"
         ),
 
         React.createElement(
           "p",
           { style: { textAlign: "center", marginTop: "15px" } },
-          "Don't have an account?"
+          "Already have an account?"
         ),
 
         React.createElement(
           Link,
           {
-            to: "/register",
+            to: "/login",
             style: {
               display: "block",
               textAlign: "center",
@@ -166,11 +203,11 @@ function Login() {
               textDecoration: "none",
             },
           },
-          "Register"
+          "Login"
         )
       )
     )
   );
 }
 
-export default Login;
+export default Register;

@@ -1,0 +1,128 @@
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
+
+function HomePage() {
+  const [books, setBooks] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const booksPerPage = 8;
+  const totalPages = Math.ceil(books.length / booksPerPage);
+  const indexOfLastBook = currentPage * booksPerPage;
+  const indexOfFirstBook = indexOfLastBook - booksPerPage;
+  const currentBooks = books.slice(indexOfFirstBook, indexOfLastBook);
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/books');
+        setBooks(response.data);
+        setLoading(false);
+      } catch (err) {
+        // Hata durumunda boş dizi ile devam et
+        setBooks([]);
+        setLoading(false);
+      }
+    };
+
+    fetchBooks();
+  }, []);
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Navigasyon Menüsü - Her durumda görünecek */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Kitap Kütüphanesi</h1>
+        <div className="space-x-4">
+          <Link 
+            to="/register" 
+            className="text-blue-600 hover:text-blue-800 transition font-medium"
+          >
+            Kayıt Ol
+          </Link>
+          <Link 
+            to="/login" 
+            className="text-green-600 hover:text-green-800 transition font-medium"
+          >
+            Giriş Yap
+          </Link>
+          <Link 
+            to="/logout" 
+            className="text-red-600 hover:text-red-800 transition font-medium"
+          >
+            Çıkış Yap
+          </Link>
+        </div>
+      </div>
+
+      {/* Kitap Listesi Alanı */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        {loading ? (
+          // Yüklenme durumunda
+          Array.from({ length: booksPerPage }).map((_, index) => (
+            <div 
+              key={index} 
+              className="bg-gray-200 animate-pulse h-64 rounded-lg"
+            ></div>
+          ))
+        ) : books.length === 0 ? (
+          // Kitap yoksa
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-600 text-xl">
+              Henüz kitap bulunmamaktadır.
+            </p>
+          </div>
+        ) : (
+          // Kitaplar varsa
+          currentBooks.map((book) => (
+            <div 
+              key={book._id || Math.random()} 
+              className="bg-white shadow-md rounded-lg overflow-hidden transform transition hover:scale-105"
+            >
+              <img 
+                src={book.image || 'https://via.placeholder.com/150'} 
+                alt={book.title || 'Kitap Resmi'} 
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-gray-800 truncate">
+                  {book.title || 'İsimsiz Kitap'}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {book.author || 'Bilinmeyen Yazar'}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Sayfalandırma - Kitap varsa göster */}
+      {books.length > 0 && (
+        <div className="flex justify-center items-center mt-8 space-x-4">
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+          >
+            Önceki Sayfa
+          </button>
+          <span className="text-gray-700">
+            Sayfa {currentPage} / {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+          >
+            Sonraki Sayfa
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default HomePage;
