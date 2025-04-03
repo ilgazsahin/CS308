@@ -20,7 +20,7 @@ function Register() {
     }
 
     axios
-      .post("http://localhost:3001/register", { email, name, password })
+      .post("http://localhost:3001/api/users/register", { email, name, password })
       .then((result) => {
         console.log(result);
         // After successful registration, navigate to login

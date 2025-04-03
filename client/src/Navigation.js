@@ -1,11 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
-import MainPage from './pages/HomePage';
-import Signup from './pages/Signup';  
+import MainPage from './pages/HomePage/HomePage';
+import Signup from './pages/Signup';
 import AddBook from "./pages/AddBook";
 import BookDetail from "./pages/BookDetail";
 import Dashboard from "./pages/AdminDashboard";
+import EditBook from "./pages/EditBook";  // Make sure you import your EditBook component
 
 const Navigation = () => {
     return (
@@ -13,24 +14,19 @@ const Navigation = () => {
             <Routes>
                 {/* Start the app at HomePage */}
                 <Route path="/" element={<MainPage />} />
-                
-                {/* Login page */}
-                <Route path="/login" element={<LoginPage />} />
-
-                {/* Another route for Home if you want /home as well */}
                 <Route path="/home" element={<MainPage />} />
 
-                {/* Register page */}
+                {/* Auth Routes */}
+                <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<Signup />} />
 
-                {/* Add Book page */}
+                {/* Book-related Routes */}
                 <Route path="/addbook" element={<AddBook />} />
-
-                {/* Single Book Detail page */}
                 <Route path="/book/:id" element={<BookDetail />} />
+                <Route path="/editbook/:id" element={<EditBook />} />
 
                 {/* Admin Dashboard */}
-                <Route path="/dashboard" element={<Dashboard />} /> 
+                <Route path="/dashboard" element={<Dashboard />} />
             </Routes>
         </Router>
     );
