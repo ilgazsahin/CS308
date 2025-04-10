@@ -9,29 +9,38 @@ import Dashboard from "./pages/AdminDashboard";
 import EditBook from "./pages/EditBook";  // Make sure you import your EditBook component
 import ProductsPage from "./pages/ProductsPage";
 import AboutPage from "./pages/AboutPage";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import { CartProvider } from './components/CartContext';
 
 const Navigation = () => {
     return (
         <Router>
-            <Routes>
-                {/* Start the app at HomePage */}
-                <Route path="/" element={<MainPage />} />
-                <Route path="/home" element={<MainPage />} />
+            <CartProvider>
+                <Routes>
+                    {/* Start the app at HomePage */}
+                    <Route path="/" element={<MainPage />} />
+                    <Route path="/home" element={<MainPage />} />
 
-                {/* Auth Routes */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<Signup />} />
+                    {/* Auth Routes */}
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<Signup />} />
 
-                {/* Book-related Routes */}
-                <Route path="/addbook" element={<AddBook />} />
-                <Route path="/book/:id" element={<BookDetail />} />
-                <Route path="/editbook/:id" element={<EditBook />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/about" element={<AboutPage />} />
+                    {/* Book-related Routes */}
+                    <Route path="/addbook" element={<AddBook />} />
+                    <Route path="/book/:id" element={<BookDetail />} />
+                    <Route path="/editbook/:id" element={<EditBook />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/about" element={<AboutPage />} />
 
-                {/* Admin Dashboard */}
-                <Route path="/dashboard" element={<Dashboard />} />
-            </Routes>
+                    {/* Cart and Checkout Routes */}
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+
+                    {/* Admin Dashboard */}
+                    <Route path="/dashboard" element={<Dashboard />} />
+                </Routes>
+            </CartProvider>
         </Router>
     );
 };

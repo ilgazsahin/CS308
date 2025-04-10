@@ -1,12 +1,14 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaSearch, FaShoppingCart } from "react-icons/fa";
+import { useCart } from "../../components/CartContext";
 
 const NavigationBar = () => {
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const token = localStorage.getItem("token");
     const userName = localStorage.getItem("userName");
+    const { cartCount, cartTotal } = useCart();
 
     const handleToggle = () => {
         setIsOpen((prev) => !prev);
@@ -131,7 +133,7 @@ const NavigationBar = () => {
                             gap: "5px"
                         }}>
                             <FaShoppingCart />
-                            CART (0$)
+                            CART ({cartCount > 0 ? `$${cartTotal.toFixed(2)}` : "0"})
                         </Link>
                         <Link to="#" style={{ 
                             textDecoration: "none", 

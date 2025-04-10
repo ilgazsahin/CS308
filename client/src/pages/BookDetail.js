@@ -3,10 +3,12 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
+import { useCart } from "../components/CartContext";
 
 const BookDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { addToCart } = useCart();
 
     // Book info
     const [book, setBook] = useState(null);
@@ -15,6 +17,9 @@ const BookDetail = () => {
     // New comment form fields
     const [text, setText] = useState("");
     const [rating, setRating] = useState(0);
+    
+    // Button state
+    const [showCheck, setShowCheck] = useState(false);
 
     // Fetch the book details on mount/update
     useEffect(() => {
@@ -83,8 +88,45 @@ const BookDetail = () => {
         }
     };
 
+    const handleAddToCart = () => {
+        // Add to cart first
+        addToCart(book);
+        
+        // Show the check and green color
+        setShowCheck(true);
+        
+        // Reset after animation completes (2 seconds)
+        setTimeout(() => {
+            setShowCheck(false);
+        }, 2000);
+    };
+
     return (
         <div style={{backgroundColor: "var(--light-bg)", minHeight: "100vh"}}>
+            {/* Animation style */}
+            <style>
+                {`
+                    @keyframes fadeIn {
+                        0% { opacity: 0; transform: scale(0.8); }
+                        100% { opacity: 1; transform: scale(1); }
+                    }
+                    
+                    .add-cart-btn {
+                        transition: background-color 0.4s ease;
+                    }
+                    
+                    .add-cart-btn.added {
+                        background-color: #4b6043 !important;
+                    }
+                    
+                    .check-icon {
+                        display: block;
+                        width: 100%;
+                        animation: fadeIn 0.4s ease-out;
+                    }
+                `}
+            </style>
+            
             <NavigationBar />
             
             <div className="container" style={{padding: "60px 0"}}>
@@ -170,15 +212,28 @@ const BookDetail = () => {
                         }}>{book.description || "No description available."}</p>
                         
                         <div style={{display: "flex", gap: "15px", marginTop: "30px"}}>
-                            <button className="btn btn-primary" style={{
-                                padding: "12px 25px",
-                                backgroundColor: "var(--primary-color)",
-                                color: "white",
-                                border: "none",
-                                cursor: "pointer",
-                                fontWeight: "500",
-                                fontSize: "0.9rem"
-                            }}>ADD TO CART</button>
+                            <button 
+                                onClick={handleAddToCart}
+                                className={`btn btn-primary add-cart-btn ${showCheck ? 'added' : ''}`}
+                                style={{
+                                    padding: "12px 25px",
+                                    backgroundColor: "var(--primary-color)",
+                                    color: "white",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontWeight: "500",
+                                    fontSize: "0.9rem",
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    width: "150px"
+                                }}
+                            >
+                                {showCheck ? (
+                                    <span className="check-icon">
+                                        ✓ ADDED
+                                    </span>
+                                ) : "ADD TO CART"}
+                            </button>
                             
                             <button className="btn" style={{
                                 padding: "12px 25px",
