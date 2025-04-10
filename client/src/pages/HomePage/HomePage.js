@@ -87,7 +87,7 @@ const HomePage = () => {
                             fontWeight: "400",
                             fontFamily: "'Playfair Display', serif",
                         }}>
-                            Welcome to Booksaw
+                            Welcome to STORE 26
                         </h2>
                         <p style={{ marginBottom: "2rem", color: "var(--light-text)" }}>
                             No books available at the moment. Check back soon or visit our products page.

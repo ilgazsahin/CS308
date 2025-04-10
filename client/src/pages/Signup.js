@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import React from "react";
+import NavigationBar from "./HomePage/NavigationBar";
+import Footer from "../components/Footer";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -35,178 +37,212 @@ function Register() {
       });
   };
 
-  return React.createElement(
-    "div",
-    {
-      style: {
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f0f2f5",
-        height: "100vh",
-      },
-    },
-    React.createElement(
-      "div",
-      {
-        style: {
-          backgroundColor: "#fff",
-          padding: "30px",
-          borderRadius: "8px",
-          boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-          width: "100%",
-          maxWidth: "400px",
-        },
-      },
-      React.createElement(
-        "h2",
-        { style: { textAlign: "center", marginBottom: "20px" } },
-        "Register"
-      ),
+  return (
+    <div style={{ backgroundColor: "var(--light-bg)", minHeight: "100vh" }}>
+      <NavigationBar />
+      
+      <div className="container">
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          padding: "80px 0" 
+        }}>
+          <div style={{ 
+            backgroundColor: "white", 
+            padding: "40px", 
+            width: "100%", 
+            maxWidth: "500px"
+          }}>
+            <h1 style={{ 
+              fontFamily: "'Playfair Display', serif", 
+              fontSize: "2rem", 
+              marginBottom: "30px", 
+              color: "var(--primary-color)",
+              textAlign: "center"
+            }}>
+              Create an Account
+            </h1>
 
-      errorMessage &&
-        React.createElement(
-          "div",
-          { style: { color: "red", marginBottom: "15px" } },
-          errorMessage
-        ),
+            {errorMessage && (
+              <div style={{ 
+                color: "#721c24", 
+                backgroundColor: "#f8d7da", 
+                padding: "12px 15px", 
+                borderRadius: "4px", 
+                marginBottom: "20px",
+                fontSize: "0.9rem"
+              }}>
+                {errorMessage}
+              </div>
+            )}
 
-      React.createElement(
-        "form",
-        { onSubmit: handleSubmit },
-        React.createElement(
-          "div",
-          { style: { marginBottom: "15px" } },
-          React.createElement(
-            "label",
-            { htmlFor: "email", style: { display: "block" } },
-            "Email"
-          ),
-          React.createElement("input", {
-            type: "email",
-            placeholder: "Enter Email",
-            autoComplete: "off",
-            name: "email",
-            style: {
-              width: "100%",
-              padding: "10px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            },
-            onChange: (e) => setEmail(e.target.value),
-          })
-        ),
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: "25px" }}>
+                <label 
+                  htmlFor="email" 
+                  style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "var(--primary-color)",
+                    fontWeight: "500"
+                  }}
+                >
+                  Email Address
+                </label>
+                <input 
+                  type="email"
+                  id="email" 
+                  placeholder="Enter your email" 
+                  autoComplete="off" 
+                  name="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 15px", 
+                    border: "1px solid var(--border-color)", 
+                    fontSize: "1rem",
+                    backgroundColor: "#f9f9f9"
+                  }} 
+                />
+              </div>
 
-        React.createElement(
-          "div",
-          { style: { marginBottom: "15px" } },
-          React.createElement(
-            "label",
-            { htmlFor: "email", style: { display: "block" } },
-            "Name"
-          ),
-          React.createElement("input", {
-            type: "name",
-            placeholder: "Enter Name: ",
-            autoComplete: "off",
-            name: "name",
-            style: {
-              width: "100%",
-              padding: "10px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            },
-            onChange: (e) => setName(e.target.value),
-          })
-        ),
+              <div style={{ marginBottom: "25px" }}>
+                <label 
+                  htmlFor="name" 
+                  style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "var(--primary-color)",
+                    fontWeight: "500"
+                  }}
+                >
+                  Full Name
+                </label>
+                <input 
+                  type="text"
+                  id="name" 
+                  placeholder="Enter your name" 
+                  autoComplete="off" 
+                  name="name" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 15px", 
+                    border: "1px solid var(--border-color)", 
+                    fontSize: "1rem",
+                    backgroundColor: "#f9f9f9"
+                  }} 
+                />
+              </div>
 
-        React.createElement(
-          "div",
-          { style: { marginBottom: "15px" } },
-          React.createElement(
-            "label",
-            { htmlFor: "password", style: { display: "block" } },
-            "Password"
-          ),
-          React.createElement("input", {
-            type: "password",
-            placeholder: "Enter Password",
-            name: "password",
-            style: {
-              width: "100%",
-              padding: "10px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            },
-            onChange: (e) => setPassword(e.target.value),
-          })
-        ),
+              <div style={{ marginBottom: "25px" }}>
+                <label 
+                  htmlFor="password" 
+                  style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "var(--primary-color)",
+                    fontWeight: "500"
+                  }}
+                >
+                  Password
+                </label>
+                <input 
+                  type="password" 
+                  id="password"
+                  placeholder="Enter your password" 
+                  name="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 15px", 
+                    border: "1px solid var(--border-color)", 
+                    fontSize: "1rem",
+                    backgroundColor: "#f9f9f9"
+                  }} 
+                />
+              </div>
 
-        React.createElement(
-          "div",
-          { style: { marginBottom: "15px" } },
-          React.createElement(
-            "label",
-            { htmlFor: "confirmPassword", style: { display: "block" } },
-            "Confirm Password"
-          ),
-          React.createElement("input", {
-            type: "password",
-            placeholder: "Confirm Password",
-            name: "confirmPassword",
-            style: {
-              width: "100%",
-              padding: "10px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            },
-            onChange: (e) => setConfirmPassword(e.target.value),
-          })
-        ),
+              <div style={{ marginBottom: "25px" }}>
+                <label 
+                  htmlFor="confirmPassword" 
+                  style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "var(--primary-color)",
+                    fontWeight: "500"
+                  }}
+                >
+                  Confirm Password
+                </label>
+                <input 
+                  type="password" 
+                  id="confirmPassword"
+                  placeholder="Confirm your password" 
+                  name="confirmPassword" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 15px", 
+                    border: "1px solid var(--border-color)", 
+                    fontSize: "1rem",
+                    backgroundColor: "#f9f9f9"
+                  }} 
+                />
+              </div>
 
-        React.createElement(
-          "button",
-          {
-            type: "submit",
-            style: {
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#007bff",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            },
-          },
-          "Register"
-        ),
+              <div style={{ marginBottom: "25px" }}>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  style={{ 
+                    width: "100%", 
+                    padding: "14px", 
+                    backgroundColor: "var(--primary-color)", 
+                    color: "white", 
+                    border: "none", 
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  CREATE ACCOUNT
+                </button>
+              </div>
 
-        React.createElement(
-          "p",
-          { style: { textAlign: "center", marginTop: "15px" } },
-          "Already have an account?"
-        ),
-
-        React.createElement(
-          Link,
-          {
-            to: "/login",
-            style: {
-              display: "block",
-              textAlign: "center",
-              marginTop: "10px",
-              color: "#007bff",
-              textDecoration: "none",
-            },
-          },
-          "Login"
-        )
-      )
-    )
+              <div style={{ 
+                textAlign: "center", 
+                color: "var(--light-text)",
+                fontSize: "0.9rem"
+              }}>
+                <p>Already have an account? {" "}
+                  <Link 
+                    to="/login" 
+                    style={{ 
+                      color: "var(--primary-color)", 
+                      textDecoration: "none",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Login here
+                  </Link>
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <Footer />
+    </div>
   );
 }
 

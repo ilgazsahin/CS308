@@ -40,14 +40,14 @@ const Footer = () => {
               fontSize: '1.3rem', 
               marginBottom: '20px',
               color: 'var(--primary-color)'
-            }}>BOOKSAW</h3>
+            }}>STORE 26</h3>
             <p style={{ 
               lineHeight: '1.7', 
               color: 'var(--light-text)', 
               marginBottom: '20px',
               fontSize: '0.9rem'
             }}>
-              At Booksaw, we believe that reading is not just a hobby, it's a journey that expands minds 
+              At STORE 26, we believe that reading is not just a hobby, it's a journey that expands minds 
               and transforms lives. Our curated collection of books spans across genres to satisfy every 
               reader's taste.
             </p>
@@ -124,7 +124,7 @@ const Footer = () => {
             }}>
               123 Book Street<br />
               Reading City, RC 12345<br />
-              contact@booksaw.com<br />
+              contact@store26.com<br />
               +1 (555) 123-4567
             </p>
           </div>
@@ -139,7 +139,7 @@ const Footer = () => {
           color: 'var(--light-text)',
           fontSize: '0.8rem'
         }}>
-          &copy; {new Date().getFullYear()} Booksaw. All rights reserved.
+          &copy; {new Date().getFullYear()} STORE 26. All rights reserved.
         </div>
       </div>
     </footer>

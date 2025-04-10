@@ -162,7 +162,7 @@ const NavigationBar = () => {
                                 fontFamily: "'Playfair Display', serif",
                                 color: "var(--primary-color)"
                             }}>
-                                BOOKSAW
+                                STORE 26
                             </h1>
                         </Link>
                     </div>
