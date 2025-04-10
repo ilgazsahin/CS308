@@ -1,7 +1,6 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserCircle, FaShoppingCart } from "react-icons/fa";
-
+import { FaSearch, FaShoppingCart } from "react-icons/fa";
 
 const NavigationBar = () => {
     const navigate = useNavigate();
@@ -21,144 +20,162 @@ const NavigationBar = () => {
     };
 
     return (
-        <nav
-            style={{
-                padding: "10px",
-                background: "#007bff",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            }}
-        >
-            {/* Left Side: Logo */}
-            <div>
-                <Link
-                    to="/home"
-                    style={{
-                        textDecoration: "none",
-                        fontWeight: "bold",
-                        fontSize: "20px",
-                        color: "#fff",
-                    }}
-                >
-                    Bookstore
-                </Link>
-            </div>
-
-            {/* Right Side: Cart Icon + User Account */}
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-
-                {/* User Dropdown */}
-                <div style={{ position: "relative" }}>
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            cursor: "pointer",
-                            gap: "8px",
-                            color: "#fff",
-                        }}
-                        onClick={handleToggle}
-                    >
-                        <FaUserCircle size={24} />
-                        <span style={{ fontWeight: "bold" }}>My Account</span>
-                        <span style={{ fontSize: "12px" }}>{isOpen ? "▲" : "▼"}</span>
-                    </div>
-
-                    {isOpen && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: "40px",
-                                right: 0,
-                                backgroundColor: "#fff",
-                                border: "1px solid #ccc",
-                                borderRadius: "4px",
-                                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-                                padding: "8px 0",
-                                width: "180px",
-                                zIndex: 999,
-                            }}
-                        >
-                            {token ? (
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "flex-start",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            padding: "8px 16px",
-                                            width: "100%",
-                                            textAlign: "left",
-                                            color: "#333",
-                                            borderBottom: "1px solid #eee",
-                                            marginBottom: "8px",
-                                        }}
-                                    >
-                                        Hello, {userName || "User"}
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            handleLogout();
-                                            setIsOpen(false);
-                                        }}
-                                        style={{
-                                            background: "none",
-                                            border: "none",
-                                            textAlign: "left",
-                                            width: "100%",
-                                            padding: "8px 16px",
-                                            cursor: "pointer",
-                                            color: "#333",
-                                        }}
-                                    >
-                                        Logout
-                                    </button>
-                                </div>
-                            ) : (
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "flex-start",
-                                    }}
-                                >
-                                    <Link
-                                        to="/login"
-                                        onClick={() => setIsOpen(false)}
-                                        style={{
-                                            textDecoration: "none",
-                                            color: "#333",
-                                            padding: "8px 16px",
-                                            display: "block",
-                                            borderBottom: "1px solid #eee",
-                                        }}
-                                    >
-                                        Log in
-                                    </Link>
-                                    <Link
-                                        to="/register"
-                                        onClick={() => setIsOpen(false)}
-                                        style={{
-                                            textDecoration: "none",
-                                            color: "#333",
-                                            padding: "8px 16px",
-                                            display: "block",
-                                        }}
-                                    >
-                                        Create an Account
-                                    </Link>
+        <div>
+            {/* Top bar with account, cart */}
+            <div 
+                style={{
+                    borderBottom: "1px solid var(--border-color)",
+                    padding: "10px 0",
+                    backgroundColor: "white",
+                    position: "relative"
+                }}
+            >
+                <div className="container" style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center"
+                }}>
+                    {/* Account and Cart */}
+                    <div style={{ display: "flex", gap: "20px", alignItems: "center", position: "relative" }}>
+                        <div style={{ position: "relative" }}>
+                            <Link to={token ? "#" : "/login"} 
+                                onClick={token ? handleToggle : null}
+                                style={{ 
+                                    textDecoration: "none", 
+                                    color: "var(--primary-color)",
+                                    fontSize: "14px"
+                                }}
+                            >
+                                ACCOUNT
+                            </Link>
+                            
+                            {/* Dropdown for account */}
+                            {isOpen && (
+                                <div style={{
+                                    position: "absolute",
+                                    top: "30px",
+                                    right: 0,
+                                    backgroundColor: "#fff",
+                                    border: "1px solid var(--border-color)",
+                                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+                                    padding: "15px",
+                                    width: "200px",
+                                    zIndex: 1000
+                                }}>
+                                    {token ? (
+                                        <div style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "10px"
+                                        }}>
+                                            <p style={{ margin: 0, fontWeight: "500" }}>Hello, {userName || "User"}</p>
+                                            <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            <button
+                                                onClick={() => {
+                                                    handleLogout();
+                                                    setIsOpen(false);
+                                                }}
+                                                style={{
+                                                    background: "none",
+                                                    border: "none",
+                                                    textAlign: "left",
+                                                    padding: "5px 0",
+                                                    cursor: "pointer",
+                                                    color: "var(--primary-color)"
+                                                }}
+                                            >
+                                                Logout
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "10px"
+                                        }}>
+                                            <Link
+                                                to="/login"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Log in
+                                            </Link>
+                                            <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            <Link
+                                                to="/register"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Create an Account
+                                            </Link>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
-                    )}
+                        
+                        <Link to="/cart" style={{ 
+                            textDecoration: "none", 
+                            color: "var(--primary-color)",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px"
+                        }}>
+                            <FaShoppingCart />
+                            CART (0$)
+                        </Link>
+                        <Link to="#" style={{ 
+                            textDecoration: "none", 
+                            color: "var(--primary-color)" 
+                        }}>
+                            <FaSearch />
+                        </Link>
+                    </div>
                 </div>
             </div>
-        </nav>
+
+            {/* Main navigation */}
+            <header style={{
+                padding: "20px 0",
+                backgroundColor: "white",
+                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)"
+            }}>
+                <div className="container" style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                }}>
+                    {/* Logo */}
+                    <div>
+                        <Link to="/home" style={{ textDecoration: "none" }}>
+                            <h1 style={{ 
+                                margin: 0, 
+                                fontFamily: "'Playfair Display', serif",
+                                color: "var(--primary-color)"
+                            }}>
+                                BOOKSAW
+                            </h1>
+                        </Link>
+                    </div>
+
+                    {/* Main Menu */}
+                    <nav style={{ display: "flex" }}>
+                        <Link to="/home" className="nav-link">HOME</Link>
+                        <Link to="/about" className="nav-link">ABOUT</Link>
+                        <Link to="/products" className="nav-link">PRODUCTS</Link>
+                    </nav>
+                </div>
+            </header>
+        </div>
     );
 };
 

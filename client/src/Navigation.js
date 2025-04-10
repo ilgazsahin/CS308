@@ -7,6 +7,8 @@ import AddBook from "./pages/AddBook";
 import BookDetail from "./pages/BookDetail";
 import Dashboard from "./pages/AdminDashboard";
 import EditBook from "./pages/EditBook";  // Make sure you import your EditBook component
+import ProductsPage from "./pages/ProductsPage";
+import AboutPage from "./pages/AboutPage";
 
 const Navigation = () => {
     return (
@@ -24,6 +26,8 @@ const Navigation = () => {
                 <Route path="/addbook" element={<AddBook />} />
                 <Route path="/book/:id" element={<BookDetail />} />
                 <Route path="/editbook/:id" element={<EditBook />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/about" element={<AboutPage />} />
 
                 {/* Admin Dashboard */}
                 <Route path="/dashboard" element={<Dashboard />} />

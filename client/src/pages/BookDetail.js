@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import NavigationBar from "./HomePage/NavigationBar";
+import Footer from "../components/Footer";
 
 const BookDetail = () => {
     const { id } = useParams();
@@ -40,7 +42,14 @@ const BookDetail = () => {
         fetchComments();
     }, [id]);
 
-    if (!book) return <div style={styles.loading}>Loading Book Details...</div>;
+    if (!book) return (
+        <div>
+            <NavigationBar />
+            <div className="container" style={{textAlign: "center", padding: "100px 0"}}>
+                <p>Loading Book Details...</p>
+            </div>
+        </div>
+    );
 
     const handleCommentSubmit = async (e) => {
         e.preventDefault();
@@ -75,251 +84,246 @@ const BookDetail = () => {
     };
 
     return (
-        <div style={styles.pageContainer}>
-            {/* Back Button */}
-            <button onClick={() => navigate("/")} style={styles.backButton}>
-                &larr; Back to Main Page
-            </button>
+        <div style={{backgroundColor: "var(--light-bg)", minHeight: "100vh"}}>
+            <NavigationBar />
+            
+            <div className="container" style={{padding: "60px 0"}}>
+                {/* Breadcrumb */}
+                <div style={{marginBottom: "40px"}}>
+                    <Link to="/" style={{textDecoration: "none", color: "var(--light-text)"}}>Home</Link>
+                    <span style={{margin: "0 10px", color: "var(--light-text)"}}>›</span>
+                    <Link to="/shop" style={{textDecoration: "none", color: "var(--light-text)"}}>Shop</Link>
+                    <span style={{margin: "0 10px", color: "var(--light-text)"}}>›</span>
+                    <span style={{color: "var(--primary-color)"}}>{book.title}</span>
+                </div>
+                
+                <div style={{
+                    display: "flex", 
+                    gap: "60px",
+                    backgroundColor: "white",
+                    padding: "40px",
+                    marginBottom: "60px"
+                }}>
+                    {/* Book Image */}
+                    <div style={{flex: "1"}}>
+                        <div style={{
+                            backgroundColor: "#f8f8f8", 
+                            height: "500px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}>
+                            <img 
+                                src={book.image} 
+                                alt={book.title} 
+                                style={{
+                                    maxWidth: "100%",
+                                    maxHeight: "100%",
+                                    objectFit: "contain"
+                                }} 
+                            />
+                        </div>
+                    </div>
 
-            <div style={styles.bookContainer}>
-                {/* Book Image */}
-                <div style={styles.imageContainer}>
-                    <img src={book.image} alt={book.title} style={styles.bookImage} />
+                    {/* Book Info */}
+                    <div style={{flex: "1"}}>
+                        <h1 style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "2.5rem",
+                            fontWeight: "500",
+                            marginBottom: "20px",
+                            color: "var(--primary-color)"
+                        }}>{book.title}</h1>
+                        
+                        <p style={{
+                            fontSize: "1.5rem",
+                            fontWeight: "500",
+                            marginBottom: "20px",
+                            color: "var(--accent-color)"
+                        }}>${book.price ? book.price.toFixed(2) : "35.00"}</p>
+                        
+                        <p style={{
+                            fontSize: "1rem",
+                            color: "var(--light-text)",
+                            marginBottom: "10px"
+                        }}><strong>Author:</strong> {book.author}</p>
+                        
+                        {book.publishedYear && (
+                            <p style={{
+                                fontSize: "1rem",
+                                color: "var(--light-text)",
+                                marginBottom: "10px"
+                            }}><strong>Published:</strong> {book.publishedYear}</p>
+                        )}
+                        
+                        <div style={{
+                            width: "40px",
+                            height: "3px",
+                            backgroundColor: "var(--accent-color)",
+                            margin: "20px 0"
+                        }}></div>
+                        
+                        <p style={{
+                            lineHeight: "1.7",
+                            color: "var(--text-color)",
+                            marginBottom: "30px"
+                        }}>{book.description || "No description available."}</p>
+                        
+                        <div style={{display: "flex", gap: "15px", marginTop: "30px"}}>
+                            <button className="btn btn-primary" style={{
+                                padding: "12px 25px",
+                                backgroundColor: "var(--primary-color)",
+                                color: "white",
+                                border: "none",
+                                cursor: "pointer",
+                                fontWeight: "500",
+                                fontSize: "0.9rem"
+                            }}>ADD TO CART</button>
+                            
+                            <button className="btn" style={{
+                                padding: "12px 25px",
+                                border: "1px solid var(--border-color)",
+                                backgroundColor: "transparent",
+                                color: "var(--primary-color)",
+                                cursor: "pointer",
+                                fontWeight: "500",
+                                fontSize: "0.9rem"
+                            }}>ADD TO WISHLIST</button>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Book Info + Buttons */}
-                <div style={styles.infoContainer}>
-                    <h1 style={styles.bookTitle}>{book.title}</h1>
-                    <p style={styles.authorText}>
-                        <strong>Author:</strong> {book.author}
-                    </p>
+                {/* Comments Section */}
+                <div style={{backgroundColor: "white", padding: "40px"}}>
+                    <h2 style={{
+                        fontFamily: "'Playfair Display', serif",
+                        fontSize: "1.8rem",
+                        marginBottom: "30px",
+                        color: "var(--primary-color)"
+                    }}>Reviews ({comments.length})</h2>
 
-                    {/* Display price if available */}
-                    {book.price !== undefined && (
-                        <p style={styles.priceText}>
-                            <strong>Price: </strong>${book.price.toFixed(2)}
-                        </p>
+                    {comments.length > 0 ? (
+                        <div style={{marginBottom: "50px"}}>
+                            {comments.map((c) => (
+                                <div key={c._id} style={{
+                                    borderBottom: "1px solid var(--border-color)",
+                                    paddingBottom: "20px",
+                                    marginBottom: "20px"
+                                }}>
+                                    <div style={{display: "flex", justifyContent: "space-between", marginBottom: "10px"}}>
+                                        <p style={{fontWeight: "500", color: "var(--primary-color)"}}>
+                                            {c.user ? c.user.name || c.user.email : "Anonymous"}
+                                        </p>
+                                        <p style={{color: "var(--light-text)", fontSize: "0.9rem"}}>
+                                            {new Date(c.createdAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    
+                                    <div style={{display: "flex", marginBottom: "10px"}}>
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <span key={star} style={{
+                                                color: star <= c.rating ? "var(--accent-color)" : "#ddd",
+                                                marginRight: "5px",
+                                                fontSize: "1.2rem"
+                                            }}>★</span>
+                                        ))}
+                                    </div>
+                                    
+                                    <p style={{lineHeight: "1.6", color: "var(--text-color)"}}>{c.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{marginBottom: "40px", color: "var(--light-text)"}}>No reviews yet. Be the first to review this book!</p>
                     )}
 
-                    <p style={styles.description}>
-                        {book.description || "No description available."}
-                    </p>
-
-                    {/* Buttons in a small row */}
-                    <div style={styles.buttonRow}>
-                        <button style={styles.addCartButton}>Add to Cart</button>
-                        <button style={styles.secondaryButton}>Add to Wishlist</button>
+                    {/* Add Review Form */}
+                    <div>
+                        <h3 style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "1.4rem",
+                            marginBottom: "20px",
+                            color: "var(--primary-color)"
+                        }}>Add a Review</h3>
+                        
+                        <form onSubmit={handleCommentSubmit}>
+                            <div style={{marginBottom: "20px"}}>
+                                <label style={{
+                                    display: "block", 
+                                    marginBottom: "10px",
+                                    color: "var(--primary-color)",
+                                    fontWeight: "500"
+                                }}>
+                                    Your Rating
+                                </label>
+                                <div style={{display: "flex", marginBottom: "10px"}}>
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button 
+                                            type="button"
+                                            key={star} 
+                                            onClick={() => setRating(star)}
+                                            style={{
+                                                color: star <= rating ? "var(--accent-color)" : "#ddd",
+                                                marginRight: "5px",
+                                                fontSize: "1.5rem",
+                                                background: "none",
+                                                border: "none",
+                                                cursor: "pointer"
+                                            }}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div style={{marginBottom: "20px"}}>
+                                <label style={{
+                                    display: "block", 
+                                    marginBottom: "10px",
+                                    color: "var(--primary-color)",
+                                    fontWeight: "500"
+                                }}>
+                                    Your Review
+                                </label>
+                                <textarea
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                    required
+                                    style={{
+                                        width: "100%",
+                                        padding: "15px",
+                                        border: "1px solid var(--border-color)",
+                                        borderRadius: "4px",
+                                        height: "150px",
+                                        resize: "vertical"
+                                    }}
+                                />
+                            </div>
+                            
+                            <button 
+                                type="submit" 
+                                className="btn btn-primary"
+                                style={{
+                                    padding: "12px 25px",
+                                    backgroundColor: "var(--primary-color)",
+                                    color: "white",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontWeight: "500",
+                                    fontSize: "0.9rem"
+                                }}
+                            >
+                                SUBMIT REVIEW
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
-
-            {/* Comments Section */}
-            <div style={styles.commentsSection}>
-                <h2 style={styles.commentsHeader}>Comments & Ratings</h2>
-
-                {comments.length > 0 ? (
-                    comments.map((c) => (
-                        <div key={c._id} style={styles.commentCard}>
-                            <p>
-                                <strong>User:</strong>{" "}
-                                {c.user ? c.user.name || c.user.email : "Unknown User"}
-                            </p>
-                            <p>
-                                <strong>Comment:</strong> {c.text}
-                            </p>
-                            <p>
-                                <strong>Rating:</strong> {c.rating}
-                            </p>
-                            <p style={styles.commentDate}>
-                                Posted on: {new Date(c.createdAt).toLocaleString()}
-                            </p>
-                        </div>
-                    ))
-                ) : (
-                    <p>No comments yet.</p>
-                )}
-
-                {/* Add new comment form */}
-                <div style={styles.newCommentCard}>
-                    <h3>Add a Comment</h3>
-                    <form onSubmit={handleCommentSubmit}>
-                        <div style={{ marginBottom: "10px" }}>
-                            <label>Comment:</label>
-                            <textarea
-                                style={styles.commentTextArea}
-                                value={text}
-                                onChange={(e) => setText(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div style={{ marginBottom: "10px" }}>
-                            <label>Rating (0-5): </label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="5"
-                                value={rating}
-                                onChange={(e) => setRating(e.target.value)}
-                                required
-                                style={styles.ratingInput}
-                            />
-                        </div>
-                        <button type="submit" style={styles.submitButton}>
-                            Submit
-                        </button>
-                    </form>
-                </div>
-            </div>
+            
+            <Footer />
         </div>
     );
-};
-
-/* --- Inline Styles for a Modern Look --- */
-const styles = {
-    pageContainer: {
-        margin: "20px auto",
-        maxWidth: "1200px",
-        fontFamily: "Arial, sans-serif",
-    },
-    backButton: {
-        marginBottom: "20px",
-        padding: "8px 16px",
-        backgroundColor: "#6c757d",
-        color: "#fff",
-        border: "none",
-        borderRadius: "4px",
-        cursor: "pointer",
-    },
-    bookContainer: {
-        display: "flex",
-        gap: "40px",
-        marginBottom: "40px",
-    },
-    imageContainer: {
-        flex: "1",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "20px",
-    },
-    bookImage: {
-        maxWidth: "100%",
-        maxHeight: "500px",
-        objectFit: "cover",
-    },
-
-    /*
-     * 1) Flex column so the text and buttons are stacked.
-     * 2) alignItems: 'flex-start' to align text & buttons to the left.
-     */
-    infoContainer: {
-        flex: "2",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-start",
-    },
-    bookTitle: {
-        fontSize: "24px",
-        margin: 0,
-        marginBottom: "10px",
-    },
-    authorText: {
-        fontSize: "16px",
-        marginBottom: "10px",
-        color: "#555",
-    },
-    priceText: {
-        fontSize: "18px",
-        color: "#007bff",
-        marginBottom: "20px",
-    },
-    description: {
-        fontSize: "16px",
-        lineHeight: "1.5",
-    },
-
-    /*
-     * Flex row for the two buttons, with a gap so they aren’t stuck together.
-     */
-    buttonRow: {
-        display: "flex",
-        flexDirection: "row",
-        gap: "10px",
-        marginTop: "20px",
-    },
-    addCartButton: {
-        padding: "12px 20px",
-        backgroundColor: "#ff4757",
-        color: "#fff",
-        border: "none",
-        borderRadius: "4px",
-        cursor: "pointer",
-        fontSize: "16px",
-    },
-    secondaryButton: {
-        padding: "12px 20px",
-        backgroundColor: "#f0f0f0",
-        border: "none",
-        borderRadius: "4px",
-        cursor: "pointer",
-        fontSize: "16px",
-    },
-
-    commentsSection: {
-        marginTop: "20px",
-    },
-    commentsHeader: {
-        fontSize: "20px",
-        marginBottom: "10px",
-    },
-    commentCard: {
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-        padding: "10px",
-        marginBottom: "10px",
-        backgroundColor: "#fff",
-    },
-    commentDate: {
-        fontSize: "12px",
-        color: "#888",
-    },
-    newCommentCard: {
-        marginTop: "20px",
-        padding: "10px",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        backgroundColor: "#fafafa",
-    },
-    commentTextArea: {
-        width: "98%",
-        marginTop: "5px",
-        padding: "8px",
-        borderRadius: "4px",
-        border: "1px solid #ccc",
-        resize: "vertical",
-    },
-    ratingInput: {
-        width: "60px",
-        marginLeft: "5px",
-        padding: "4px",
-        borderRadius: "4px",
-        border: "1px solid #ccc",
-    },
-    submitButton: {
-        padding: "8px 16px",
-        backgroundColor: "#007bff",
-        color: "#fff",
-        border: "none",
-        borderRadius: "4px",
-        cursor: "pointer",
-    },
-    loading: {
-        textAlign: "center",
-        marginTop: "50px",
-        fontSize: "18px",
-    },
 };
 
 export default BookDetail;

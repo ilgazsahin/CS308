@@ -9,8 +9,6 @@ const UserController = require("./Controller/UserController");
 const BookController = require("./Controller/BookController");
 const CommentController = require("./Controller/CommentController");
 
-
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = 'your_jwt_secret_key'; // Consider storing this in an environment variable
@@ -20,7 +18,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
+mongoose.connect("mongodb://localhost:27017/MyLocalBookstore", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -59,8 +57,6 @@ mongoose.connection.once('open', async () => {
 app.use("/api/users", UserController);
 app.use("/api/books", BookController);
 app.use("/api/comments", CommentController);
-
-
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
