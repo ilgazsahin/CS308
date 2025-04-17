@@ -9,8 +9,9 @@ const ProductsPage = () => {
     const [books, setBooks] = useState([]);
     const [displayedBooks, setDisplayedBooks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [sortOption, setSortOption] = useState("default"); // default, name-asc, name-desc, price-asc, price-desc
+    const [sortOption, setSortOption] = useState("default"); // default, name-asc, name-desc, price-asc, price-desc, rating-desc, rating-asc
     const [searchQuery, setSearchQuery] = useState(""); // New state for search query
+    const [bookRatings, setBookRatings] = useState({}); // Store book ratings
 
     useEffect(() => {
         async function fetchBooks() {
@@ -20,6 +21,9 @@ const ProductsPage = () => {
                 // Only use real books from the database
                 setBooks(response.data);
                 setDisplayedBooks(response.data);
+
+                // Fetch ratings for all books
+                fetchBookRatings(response.data);
             } catch (error) {
                 console.error("An error occurred while fetching books:", error);
                 setBooks([]);
@@ -30,6 +34,37 @@ const ProductsPage = () => {
         }
         fetchBooks();
     }, []);
+
+    // Fetch ratings for all books
+    const fetchBookRatings = async (bookList) => {
+        try {
+            const ratingsObj = {};
+
+            // Fetch ratings for each book
+            for (const book of bookList) {
+                try {
+                    const response = await axios.get(`http://localhost:3001/api/comments/${book._id}`);
+                    const comments = response.data;
+
+                    // Calculate average rating
+                    if (comments.length > 0) {
+                        const totalRating = comments.reduce((sum, comment) => sum + (comment.rating || 0), 0);
+                        const averageRating = totalRating / comments.length;
+                        ratingsObj[book._id] = averageRating;
+                    } else {
+                        ratingsObj[book._id] = 0; // No ratings yet
+                    }
+                } catch (err) {
+                    console.error(`Error fetching ratings for book ${book._id}:`, err);
+                    ratingsObj[book._id] = 0;
+                }
+            }
+
+            setBookRatings(ratingsObj);
+        } catch (error) {
+            console.error("Error fetching book ratings:", error);
+        }
+    };
 
     // Filter books based on search query and apply sorting
     useEffect(() => {
@@ -47,7 +82,7 @@ const ProductsPage = () => {
 
         // Apply current sort option to filtered books
         sortBooks(filteredBooks);
-    }, [searchQuery, books, sortOption]);
+    }, [searchQuery, books, sortOption, bookRatings]);
 
     // Handle sorting
     const handleSort = (option) => {
@@ -80,6 +115,20 @@ const ProductsPage = () => {
                     return priceB - priceA;
                 });
                 break;
+            case "rating-desc": // Most popular (highest rating) first
+                sortedBooks.sort((a, b) => {
+                    const ratingA = bookRatings[a._id] || 0;
+                    const ratingB = bookRatings[b._id] || 0;
+                    return ratingB - ratingA;
+                });
+                break;
+            case "rating-asc": // Least popular (lowest rating) first
+                sortedBooks.sort((a, b) => {
+                    const ratingA = bookRatings[a._id] || 0;
+                    const ratingB = bookRatings[b._id] || 0;
+                    return ratingA - ratingB;
+                });
+                break;
             default:
                 // Default order (as returned from API)
                 break;
@@ -97,6 +146,42 @@ const ProductsPage = () => {
     const handleSearchSubmit = (e) => {
         e.preventDefault();
         // Search is already handled by the useEffect
+    };
+
+    // Function to render rating stars
+    const renderRatingStars = (bookId) => {
+        const rating = bookRatings[bookId] || 0;
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 >= 0.5;
+
+        return (
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: "10px",
+                color: "#FFD700" // Gold color for stars
+            }}>
+                {[...Array(5)].map((_, i) => {
+                    if (i < fullStars) {
+                        return <span key={i}>★</span>; // Full star
+                    } else if (i === fullStars && hasHalfStar) {
+                        return <span key={i}>⯨</span>; // Half star (approximation)
+                    } else {
+                        return <span key={i} style={{ color: "#e0e0e0" }}>☆</span>; // Empty star
+                    }
+                })}
+                {rating > 0 && (
+                    <span style={{
+                        fontSize: "0.8rem",
+                        marginLeft: "5px",
+                        color: "var(--light-text)"
+                    }}>
+                        ({rating.toFixed(1)})
+                    </span>
+                )}
+            </div>
+        );
     };
 
     return (
@@ -214,6 +299,8 @@ const ProductsPage = () => {
                                 }}
                             >
                                 <option value="default">Default</option>
+                                <option value="rating-desc">Most Popular</option>
+                                <option value="rating-asc">Least Popular</option>
                                 <option value="name-asc">Name (A-Z)</option>
                                 <option value="name-desc">Name (Z-A)</option>
                                 <option value="price-asc">Price (Low to High)</option>
@@ -291,8 +378,9 @@ const ProductsPage = () => {
                                             <p style={{
                                                 fontSize: "0.9rem",
                                                 color: "var(--light-text)",
-                                                marginBottom: "15px"
+                                                marginBottom: "5px"
                                             }}>{book.author}</p>
+                                            {renderRatingStars(book._id)}
                                         </div>
                                         <p style={{
                                             fontSize: "1rem",
