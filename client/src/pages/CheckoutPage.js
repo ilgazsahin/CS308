@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../components/CartContext';
 import NavigationBar from './HomePage/NavigationBar';
 import Footer from '../components/Footer';
+import axios from 'axios';
 
 const CheckoutPage = () => {
   const { cartItems, cartTotal, clearCart } = useCart();
@@ -82,39 +83,58 @@ const CheckoutPage = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
     
     setProcessingOrder(true);
     
-    // Mock payment processing
-    setTimeout(() => {
-      // Generate a random order ID
-      const orderId = Math.floor(100000 + Math.random() * 900000);
-      
-      // Generate order date
-      const orderDate = new Date().toISOString();
-      
-      // Store order data in localStorage (this would be sent to the server in a real app)
-      const orderData = {
-        orderId,
-        orderDate,
-        items: cartItems,
-        shippingInfo,
-        total: cartTotal,
-        status: 'Paid'
-      };
-      
-      localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
-      
-      // Clear cart 
-      clearCart();
-      
-      // Redirect to invoice page
-      navigate(`/invoice/${orderId}`);
-      
+    // Process payment
+    setTimeout(async () => {
+      try {
+        // Generate a random order ID
+        const orderId = Math.floor(100000 + Math.random() * 900000);
+        
+        // Generate order date
+        const orderDate = new Date().toISOString();
+        
+        // Get user ID for backend
+        const userId = localStorage.getItem('userId');
+        
+        // Create order data
+        const orderData = {
+          orderId,
+          orderNumber: orderId, // For backend compatibility
+          orderDate,
+          items: cartItems,
+          shippingInfo,
+          total: cartTotal,
+          status: 'Paid',
+          userId // For backend
+        };
+        
+        // Save to backend if available
+        try {
+          await axios.post('http://localhost:3001/api/orders', orderData);
+        } catch (error) {
+          console.error('Failed to send order to server, saving locally:', error);
+        }
+        
+        // Always save locally as backup
+        localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
+        
+        // Clear cart 
+        clearCart();
+        
+        // Redirect to invoice page
+        navigate(`/invoice/${orderId}`);
+      } catch (error) {
+        console.error('Error processing order:', error);
+        alert('Something went wrong while placing your order.');
+      } finally {
+        setProcessingOrder(false);
+      }
     }, 2000); // Simulate 2-second payment processing
   };
   
