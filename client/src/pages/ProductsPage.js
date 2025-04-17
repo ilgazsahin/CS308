@@ -40,7 +40,8 @@ const ProductsPage = () => {
             const query = searchQuery.toLowerCase();
             filteredBooks = filteredBooks.filter(book =>
                 book.title.toLowerCase().includes(query) ||
-                (book.author && book.author.toLowerCase().includes(query))
+                (book.author && book.author.toLowerCase().includes(query)) ||
+                (book.description && book.description.toLowerCase().includes(query))
             );
         }
 
@@ -144,7 +145,7 @@ const ProductsPage = () => {
                         }}>
                             <input
                                 type="text"
-                                placeholder="Search by book title or author..."
+                                placeholder="Search by title, author, or description..."
                                 value={searchQuery}
                                 onChange={handleSearchChange}
                                 style={{
