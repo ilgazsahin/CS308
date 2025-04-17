@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -12,7 +15,7 @@ const EmailController = require("./Controller/EmailController");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = 'your_jwt_secret_key'; // Consider storing this in an environment variable
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; // Consider storing this in an environment variable
 
 // Middleware
 app.use(express.json());

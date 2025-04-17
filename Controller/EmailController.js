@@ -34,7 +34,31 @@ const upload = multer({
   }
 }).single('pdf');
 
-// Create a test email account using Ethereal for development
+// Mailgun configuration constants - only from environment variables 
+const MAILGUN_HOST = process.env.MAILGUN_HOST || 'smtp.mailgun.org';
+const MAILGUN_PORT = process.env.MAILGUN_PORT || 587;
+const MAILGUN_USER = process.env.MAILGUN_USER || '';
+const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || '';
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || '';
+
+// Configure email transporter with Mailgun credentials
+const getMailgunTransporter = () => {
+  if (!MAILGUN_USER || !MAILGUN_API_KEY) {
+    throw new Error('Missing Mailgun credentials in environment variables');
+  }
+  
+  return nodemailer.createTransport({
+    host: MAILGUN_HOST,
+    port: MAILGUN_PORT,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: MAILGUN_USER,
+      pass: MAILGUN_API_KEY
+    }
+  });
+};
+
+// Creates a test email account for development purposes if needed
 const createTestAccount = async () => {
   try {
     const testAccount = await nodemailer.createTestAccount();
@@ -53,23 +77,15 @@ const createTestAccount = async () => {
   }
 };
 
-// Configure email transporter (in production, you would use your actual SMTP settings)
+// Get the appropriate email transporter
 const getTransporter = async () => {
-  // For development, use Ethereal email
-  if (process.env.NODE_ENV !== 'production') {
+  try {
+    // Try to use Mailgun transporter if credentials are available
+    return getMailgunTransporter();
+  } catch (error) {
+    console.error('Failed to create Mailgun transporter, falling back to test account:', error);
     return await createTestAccount();
   }
-  
-  // For production, configure with actual email settings
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.example.com',
-    port: process.env.EMAIL_PORT || 587,
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: {
-      user: process.env.EMAIL_USER || 'user@example.com',
-      pass: process.env.EMAIL_PASS || 'password'
-    }
-  });
 };
 
 const sendInvoiceEmail = async (req, res) => {
@@ -95,9 +111,12 @@ const sendInvoiceEmail = async (req, res) => {
       // Get email transporter
       const transporter = await getTransporter();
       
+      // Determine sender email
+      const fromEmail = MAILGUN_DOMAIN ? `"STORE 26" <noreply@${MAILGUN_DOMAIN}>` : '"STORE 26" <noreply@store26.com>';
+      
       // Send the email with the attached PDF
       const info = await transporter.sendMail({
-        from: '"STORE 26" <noreply@store26.com>',
+        from: fromEmail,
         to: email,
         subject: `Your Invoice #${orderId} from STORE 26`,
         text: `Thank you for shopping with STORE 26! Please find your invoice #${orderId} attached to this email.`,
@@ -124,9 +143,11 @@ const sendInvoiceEmail = async (req, res) => {
         ]
       });
 
-      // For development, log the test URL where you can preview the email
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Test email URL:', nodemailer.getTestMessageUrl(info));
+      console.log('Email sent successfully:', info.messageId);
+      
+      // Log the Ethereal test URL only if we're using Ethereal
+      if (info.messageUrl) {
+        console.log('Preview URL:', info.messageUrl);
       }
 
       // Clean up the uploaded file after sending
@@ -136,8 +157,7 @@ const sendInvoiceEmail = async (req, res) => {
 
       res.status(200).json({ 
         success: true, 
-        message: 'Invoice email sent successfully',
-        previewUrl: process.env.NODE_ENV !== 'production' ? nodemailer.getTestMessageUrl(info) : null
+        message: 'Invoice email sent successfully'
       });
     } catch (error) {
       console.error('Error sending email:', error);
