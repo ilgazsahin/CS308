@@ -3,120 +3,100 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../components/CartContext';
 import NavigationBar from './HomePage/NavigationBar';
 import Footer from '../components/Footer';
+import axios from 'axios';
 
 const CheckoutPage = () => {
   const { cartItems, cartTotal, clearCart } = useCart();
   const navigate = useNavigate();
-  
-  // Form states
+
   const [shippingInfo, setShippingInfo] = useState({
-    name: '',
-    email: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    country: '',
-    phone: ''
+    name: '', email: '', address: '', city: '', state: '', zip: '', country: '', phone: ''
   });
-  
+
   const [paymentInfo, setPaymentInfo] = useState({
-    cardNumber: '',
-    cardHolder: '',
-    expiryDate: '',
-    cvv: ''
+    cardNumber: '', cardHolder: '', expiryDate: '', cvv: ''
   });
-  
+
   const [processingOrder, setProcessingOrder] = useState(false);
   const [errors, setErrors] = useState({});
-  
-  // Check if user is logged in
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/cart'); // Redirect to cart if not logged in
-    }
+    if (!token) navigate('/cart');
   }, [navigate]);
-  
+
   const handleShippingInfoChange = (e) => {
     const { name, value } = e.target;
     setShippingInfo(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handlePaymentInfoChange = (e) => {
     const { name, value } = e.target;
     setPaymentInfo(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const validateForm = () => {
     const newErrors = {};
-    
-    // Validate shipping info
-    if (!shippingInfo.name) newErrors.name = 'Name is required';
-    if (!shippingInfo.email) newErrors.email = 'Email is required';
-    if (!shippingInfo.address) newErrors.address = 'Address is required';
-    if (!shippingInfo.city) newErrors.city = 'City is required';
-    if (!shippingInfo.state) newErrors.state = 'State is required';
-    if (!shippingInfo.zip) newErrors.zip = 'ZIP code is required';
-    if (!shippingInfo.country) newErrors.country = 'Country is required';
-    if (!shippingInfo.phone) newErrors.phone = 'Phone is required';
-    
-    // Validate payment info
-    if (!paymentInfo.cardNumber) newErrors.cardNumber = 'Card number is required';
-    else if (!/^\d{16}$/.test(paymentInfo.cardNumber.replace(/\s/g, ''))) {
-      newErrors.cardNumber = 'Invalid card number';
-    }
-    
-    if (!paymentInfo.cardHolder) newErrors.cardHolder = 'Cardholder name is required';
-    if (!paymentInfo.expiryDate) newErrors.expiryDate = 'Expiry date is required';
-    else if (!/^\d{2}\/\d{2}$/.test(paymentInfo.expiryDate)) {
-      newErrors.expiryDate = 'Invalid format (MM/YY)';
-    }
-    
-    if (!paymentInfo.cvv) newErrors.cvv = 'CVV is required';
-    else if (!/^\d{3,4}$/.test(paymentInfo.cvv)) {
-      newErrors.cvv = 'Invalid CVV';
-    }
-    
+    const { name, email, address, city, state, zip, country, phone } = shippingInfo;
+    const { cardNumber, cardHolder, expiryDate, cvv } = paymentInfo;
+
+    if (!name) newErrors.name = 'Name is required';
+    if (!email) newErrors.email = 'Email is required';
+    if (!address) newErrors.address = 'Address is required';
+    if (!city) newErrors.city = 'City is required';
+    if (!state) newErrors.state = 'State is required';
+    if (!zip) newErrors.zip = 'ZIP code is required';
+    if (!country) newErrors.country = 'Country is required';
+    if (!phone) newErrors.phone = 'Phone is required';
+
+    if (!cardNumber) newErrors.cardNumber = 'Card number is required';
+    else if (!/^\d{16}$/.test(cardNumber.replace(/\s/g, ''))) newErrors.cardNumber = 'Invalid card number';
+
+    if (!cardHolder) newErrors.cardHolder = 'Cardholder name is required';
+    if (!expiryDate) newErrors.expiryDate = 'Expiry date is required';
+    else if (!/^\d{2}\/\d{2}$/.test(expiryDate)) newErrors.expiryDate = 'Invalid format (MM/YY)';
+
+    if (!cvv) newErrors.cvv = 'CVV is required';
+    else if (!/^\d{3,4}$/.test(cvv)) newErrors.cvv = 'Invalid CVV';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
-  const handlePlaceOrder = (e) => {
+
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
+
     setProcessingOrder(true);
-    
-    // Mock payment processing
-    setTimeout(() => {
-      // Generate a random order ID
+    setTimeout(async () => {
       const orderId = Math.floor(100000 + Math.random() * 900000);
-      
-      // Generate order date
       const orderDate = new Date().toISOString();
-      
-      // Store order data in localStorage (this would be sent to the server in a real app)
+      const userId = localStorage.getItem('userId'); // ✅ User ID alınıyor
+
       const orderData = {
-        orderId,
+        orderNumber: orderId,
         orderDate,
         items: cartItems,
         shippingInfo,
         total: cartTotal,
-        status: 'Paid'
+        status: 'Paid',
+        userId // ✅ Backend'e gönderilecek
       };
-      
-      localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
-      
-      // Clear cart 
-      clearCart();
-      
-      // Redirect to invoice page
-      navigate(`/invoice/${orderId}`);
-      
-    }, 2000); // Simulate 2-second payment processing
+
+      try {
+        await axios.post('http://localhost:3001/api/orders', orderData);
+        localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
+        clearCart();
+        navigate(`/invoice/${orderId}`);
+      } catch (error) {
+        console.error('Failed to send order to server:', error);
+        alert('Something went wrong while placing your order.');
+      } finally {
+        setProcessingOrder(false);
+      }
+    }, 2000);
   };
+  
   
   return (
     <div style={{ backgroundColor: "var(--light-bg)", minHeight: "100vh" }}>
