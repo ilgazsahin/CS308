@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import NavigationBar from './HomePage/NavigationBar';
 import Footer from '../components/Footer';
+import html2pdf from 'html2pdf.js';
+import axios from 'axios';
 
 const InvoicePage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const invoiceRef = useRef(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -21,7 +28,12 @@ const InvoicePage = () => {
     const orderData = localStorage.getItem(`order_${orderId}`);
     if (orderData) {
       try {
-        setOrder(JSON.parse(orderData));
+        const parsedOrder = JSON.parse(orderData);
+        setOrder(parsedOrder);
+        // Pre-fill email field with order email if available
+        if (parsedOrder.shippingInfo && parsedOrder.shippingInfo.email) {
+          setEmail(parsedOrder.shippingInfo.email);
+        }
       } catch (error) {
         console.error('Error parsing order data:', error);
       }
@@ -36,6 +48,67 @@ const InvoicePage = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const generatePDF = async () => {
+    if (!invoiceRef.current) return null;
+    
+    const options = {
+      margin: 10,
+      filename: `STORE26_Invoice_${orderId}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    try {
+      const pdfBlob = await html2pdf().from(invoiceRef.current).set(options).outputPdf('blob');
+      return pdfBlob;
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      return null;
+    }
+  };
+
+  const handleSendEmail = async () => {
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    setEmailError('');
+    setSendingEmail(true);
+    
+    try {
+      // Generate the PDF
+      const pdfBlob = await generatePDF();
+      if (!pdfBlob) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      // Create form data to send to the server
+      const formData = new FormData();
+      formData.append('pdf', pdfBlob, `STORE26_Invoice_${orderId}.pdf`);
+      formData.append('email', email);
+      formData.append('orderId', orderId);
+      
+      // Send the PDF to the server for email delivery
+      await axios.post('http://localhost:3001/api/send-invoice-email', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setEmailSent(true);
+      setTimeout(() => setEmailSent(false), 5000); // Reset after 5 seconds
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setEmailError('Failed to send email. Please try again later.');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   if (loading) {
@@ -89,13 +162,17 @@ const InvoicePage = () => {
       </div>
       
       <div className="container" style={{ padding: "60px 0" }}>
-        <div className="invoice-container" style={{
-          backgroundColor: "white",
-          padding: "40px",
-          maxWidth: "800px",
-          margin: "0 auto",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
-        }}>
+        <div 
+          ref={invoiceRef}
+          className="invoice-container" 
+          style={{
+            backgroundColor: "white",
+            padding: "40px",
+            maxWidth: "800px",
+            margin: "0 auto",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
+          }}
+        >
           {/* Invoice Header */}
           <div style={{ 
             display: "flex", 
@@ -282,8 +359,103 @@ const InvoicePage = () => {
           </div>
         </div>
 
-        {/* Print Button - Only visible on screen, not when printing */}
-        <div className="no-print" style={{ textAlign: "center", marginTop: "30px" }}>
+        {/* Action Buttons - Only visible on screen, not when printing */}
+        <div className="no-print" style={{ 
+          textAlign: "center", 
+          marginTop: "30px", 
+          maxWidth: "800px",
+          margin: "30px auto 0"
+        }}>
+          {/* Email Form */}
+          <div style={{ 
+            backgroundColor: "white", 
+            padding: "20px", 
+            marginBottom: "30px",
+            borderRadius: "4px",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
+          }}>
+            <h3 style={{ 
+              fontSize: "1.2rem", 
+              marginBottom: "15px", 
+              fontFamily: "'Playfair Display', serif",
+              color: "var(--primary-color)"
+            }}>
+              Email Invoice
+            </h3>
+            
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "10px",
+              maxWidth: "500px",
+              margin: "0 auto"
+            }}>
+              <input 
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email address"
+                style={{
+                  flex: "1",
+                  padding: "12px 15px",
+                  border: emailError ? "1px solid #dc3545" : "1px solid var(--border-color)",
+                  borderRadius: "4px",
+                  fontSize: "0.95rem"
+                }}
+                disabled={sendingEmail || emailSent}
+              />
+              <button 
+                onClick={handleSendEmail}
+                disabled={sendingEmail || emailSent}
+                style={{
+                  padding: "12px 20px",
+                  backgroundColor: emailSent ? "#4b6043" : "var(--primary-color)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  fontWeight: "500",
+                  cursor: sendingEmail || emailSent ? "default" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: "150px"
+                }}
+              >
+                {sendingEmail ? (
+                  <span>Sending...</span>
+                ) : emailSent ? (
+                  <span>✓ Sent</span>
+                ) : (
+                  <span>Send as PDF</span>
+                )}
+              </button>
+            </div>
+            
+            {emailError && (
+              <p style={{ 
+                color: "#dc3545", 
+                fontSize: "0.85rem", 
+                marginTop: "8px",
+                textAlign: "left",
+                maxWidth: "500px",
+                margin: "8px auto 0"
+              }}>
+                {emailError}
+              </p>
+            )}
+            
+            {emailSent && (
+              <p style={{ 
+                color: "#4b6043", 
+                fontSize: "0.9rem", 
+                marginTop: "10px" 
+              }}>
+                Invoice has been sent to {email}
+              </p>
+            )}
+          </div>
+          
+          {/* Print & Back Buttons */}
           <button 
             onClick={handlePrint}
             style={{

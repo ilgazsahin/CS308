@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const UserController = require("./Controller/UserController");
 const BookController = require("./Controller/BookController");
 const CommentController = require("./Controller/CommentController");
+const EmailController = require("./Controller/EmailController");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,6 +61,9 @@ app.use("/api/orders", OrderController);
 app.use("/api/users", UserController);
 app.use("/api/books", BookController);
 app.use("/api/comments", CommentController);
+
+// Add email routes
+app.post("/api/send-invoice-email", EmailController.sendInvoiceEmail);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
