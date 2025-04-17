@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
+mongoose.connect("mongodb://localhost:27017/User", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -51,6 +51,9 @@ mongoose.connection.once('open', async () => {
 
   console.log('All necessary collections checked and created if missing.');
 });
+const OrderController = require("./Controller/OrderController");
+app.use("/api/orders", OrderController);
+
 
 // Mount controllers
 // Make sure your frontend requests match these paths (e.g., "/api/users/login")
