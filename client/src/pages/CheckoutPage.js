@@ -111,7 +111,7 @@ const CheckoutPage = () => {
           shippingInfo,
           total: cartTotal,
           status: 'Paid',
-          userId // For backend
+          userId // For identifying user's orders
         };
         
         // Save to backend if available

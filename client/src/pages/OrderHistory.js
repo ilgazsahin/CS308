@@ -11,7 +11,9 @@ const OrderHistory = () => {
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
-    if (!token) {
+    const userId = localStorage.getItem('userId');
+    
+    if (!token || !userId) {
       navigate('/login');
       return;
     }
@@ -26,7 +28,11 @@ const OrderHistory = () => {
         if (key.startsWith('order_')) {
           try {
             const orderData = JSON.parse(localStorage.getItem(key));
-            allOrders.push(orderData);
+            
+            // Only include orders for the current user
+            if (orderData.userId === userId) {
+              allOrders.push(orderData);
+            }
           } catch (error) {
             console.error('Error parsing order data:', error);
           }
