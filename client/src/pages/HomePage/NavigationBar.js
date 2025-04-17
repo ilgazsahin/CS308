@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaShoppingCart } from "react-icons/fa";
+import { FaSearch, FaShoppingCart, FaSpinner } from "react-icons/fa";
 import { useCart } from "../../components/CartContext";
 
 const NavigationBar = () => {
@@ -8,7 +8,7 @@ const NavigationBar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const token = localStorage.getItem("token");
     const userName = localStorage.getItem("userName");
-    const { cartCount, cartTotal } = useCart();
+    const { cartCount, cartTotal, isLoading } = useCart();
 
     const handleToggle = () => {
         setIsOpen((prev) => !prev);
@@ -144,8 +144,28 @@ const NavigationBar = () => {
                             alignItems: "center",
                             gap: "5px"
                         }}>
-                            <FaShoppingCart />
-                            CART ({cartCount > 0 ? `$${cartTotal.toFixed(2)}` : "0"})
+                            {isLoading ? (
+                                <>
+                                    <FaSpinner className="fa-spin" />
+                                    CART (loading...)
+                                </>
+                            ) : (
+                                <>
+                                    <FaShoppingCart />
+                                    CART ({cartCount > 0 ? `$${cartTotal.toFixed(2)}` : "0"})
+                                </>
+                            )}
+                            <style>
+                                {`
+                                    @keyframes fa-spin {
+                                        0% { transform: rotate(0deg); }
+                                        100% { transform: rotate(360deg); }
+                                    }
+                                    .fa-spin {
+                                        animation: fa-spin 1s infinite linear;
+                                    }
+                                `}
+                            </style>
                         </Link>
                         <Link to="#" style={{ 
                             textDecoration: "none", 

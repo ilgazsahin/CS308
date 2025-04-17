@@ -111,4 +111,26 @@ router.get("/check-purchase", async (req, res) => {
     }
 });
 
+// Get a specific order by orderId
+router.get("/:orderId", async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        if (!orderId) {
+            return res.status(400).json({ message: "Order ID is required" });
+        }
+        
+        const order = await OrderModel.findOne({ orderId: parseInt(orderId) });
+        
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+        
+        res.json(order);
+    } catch (err) {
+        console.error("Error retrieving order:", err);
+        res.status(500).json({ message: "Error retrieving order", error: err.message });
+    }
+});
+
 module.exports = router; 

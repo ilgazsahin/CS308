@@ -4,47 +4,55 @@ import axios from "axios";
 import React from "react";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
+import { useCart } from "../components/CartContext";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { handleLogin } = useCart();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage("");
 
-    axios
-      .post("http://localhost:3001/api/users/login", { email, password })
-      .then((result) => {
-        console.log(result);
+    try {
+      const result = await axios.post("http://localhost:3001/api/users/login", { email, password });
       
-        if (result.data && result.data.message === "Login successful") {
-          // Store the token
-          localStorage.setItem("token", result.data.token);
-      
-          // **Store the userId**:
-          // Make sure your backend actually sends "user": {...} with an "id" or "_id"
-          localStorage.setItem("userId", result.data.user.id);
+      if (result.data && result.data.message === "Login successful") {
+        // Store the token
+        localStorage.setItem("token", result.data.token);
+    
+        // Store the userId
+        const userId = result.data.user.id || result.data.user._id;
+        localStorage.setItem("userId", userId);
 
-          // Store userName
-          localStorage.setItem("userName", result.data.user.name);
-      
-          // Navigate to Home
-          navigate("/home");
-        } else {
-          setErrorMessage("Invalid credentials or unexpected response!");
-        }
-      })
-      
-      .catch((err) => {
-        // If there's an error from the server, display it
-        if (err.response && err.response.data.message) {
-          setErrorMessage(err.response.data.message);
-        } else {
-          setErrorMessage("Invalid email or password!");
-        }
-      });
+        // Store userName
+        localStorage.setItem("userName", result.data.user.name);
+    
+        // Handle cart merging
+        await handleLogin(userId);
+    
+        // Navigate to Home or redirect to original destination
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/home';
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        setErrorMessage("Invalid credentials or unexpected response!");
+      }
+    } catch (err) {
+      // If there's an error from the server, display it
+      if (err.response && err.response.data.message) {
+        setErrorMessage(err.response.data.message);
+      } else {
+        setErrorMessage("Invalid email or password!");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -152,18 +160,20 @@ function Login() {
                 <button 
                   type="submit" 
                   className="btn btn-primary"
+                  disabled={isLoading}
                   style={{ 
                     width: "100%", 
                     padding: "14px", 
-                    backgroundColor: "var(--primary-color)", 
+                    backgroundColor: isLoading ? "#ccc" : "var(--primary-color)", 
                     color: "white", 
                     border: "none", 
-                    cursor: "pointer",
+                    cursor: isLoading ? "not-allowed" : "pointer",
                     fontWeight: "500",
-                    fontSize: "0.9rem"
+                    fontSize: "0.9rem",
+                    position: "relative"
                   }}
                 >
-                  LOGIN
+                  {isLoading ? "LOGGING IN..." : "LOGIN"}
                 </button>
               </div>
 

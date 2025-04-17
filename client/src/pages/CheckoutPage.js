@@ -35,7 +35,10 @@ const CheckoutPage = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/cart'); // Redirect to cart if not logged in
+      // Save current location for redirect after login
+      sessionStorage.setItem('redirectAfterLogin', '/checkout');
+      // Redirect to login page with message
+      navigate('/login');
     }
   }, [navigate]);
   
@@ -114,21 +117,22 @@ const CheckoutPage = () => {
           userId // For identifying user's orders
         };
         
-        // Save to backend if available
+        // Save to MongoDB only
         try {
-          await axios.post('http://localhost:3001/api/orders', orderData);
+          const response = await axios.post('http://localhost:3001/api/orders', orderData);
+          if (response.status !== 201) {
+            throw new Error('Failed to save order to database');
+          }
+          
+          // Clear cart 
+          clearCart();
+          
+          // Redirect to invoice page
+          navigate(`/invoice/${orderId}`);
         } catch (error) {
-          console.error('Failed to send order to server, saving locally:', error);
+          console.error('Error saving order to database:', error);
+          alert('Failed to process your order. Please try again later.');
         }
-        
-        // Always save locally as backup
-        localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
-        
-        // Clear cart 
-        clearCart();
-        
-        // Redirect to invoice page
-        navigate(`/invoice/${orderId}`);
       } catch (error) {
         console.error('Error processing order:', error);
         alert('Something went wrong while placing your order.');

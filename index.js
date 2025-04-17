@@ -13,6 +13,8 @@ const BookController = require("./Controller/BookController");
 const CommentController = require("./Controller/CommentController");
 const EmailController = require("./Controller/EmailController");
 const OrderController = require("./Controller/OrderController");
+const CartController = require("./Controller/CartController");
+const InvoiceController = require("./Controller/InvoiceController");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,7 +25,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
+mongoose.connect("mongodb://localhost:27017/MyLocalBookstore", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -32,35 +34,42 @@ mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBo
 
 // AFTER the .then/.catch above:
 mongoose.connection.once('open', async () => {
-  const db = mongoose.connection.db;
-  const collections = await db.listCollections().toArray();
-  const collectionNames = collections.map(c => c.name);
+  try {
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const collectionNames = collections.map(c => c.name);
 
-  // For BookModel (defaults to "books" collection)
-  if (!collectionNames.includes('books')) {
-    await db.createCollection('books');
-    console.log('Created "books" collection.');
+    // Helper function to create collection if it doesn't exist
+    const createCollectionIfNotExists = async (collectionName) => {
+      try {
+        if (!collectionNames.includes(collectionName)) {
+          await db.createCollection(collectionName);
+          console.log(`Created "${collectionName}" collection.`);
+        } else {
+          console.log(`"${collectionName}" collection already exists.`);
+        }
+      } catch (error) {
+        // If error is NamespaceExists (code 48), the collection already exists
+        if (error.code === 48) {
+          console.log(`"${collectionName}" collection already exists.`);
+        } else {
+          console.error(`Error creating "${collectionName}" collection:`, error);
+        }
+      }
+    };
+
+    // Create collections if they don't exist
+    await createCollectionIfNotExists('books');
+    await createCollectionIfNotExists('users');
+    await createCollectionIfNotExists('comments'); 
+    await createCollectionIfNotExists('orders');
+    await createCollectionIfNotExists('carts');
+    await createCollectionIfNotExists('invoices');
+
+    console.log('All necessary collections checked and created if missing.');
+  } catch (error) {
+    console.error('Error checking/creating collections:', error);
   }
-
-  // For UserModel (named "users")
-  if (!collectionNames.includes('users')) {
-    await db.createCollection('users');
-    console.log('Created "users" collection.');
-  }
-
-  // If you add a separate "comments" collection later
-  if (!collectionNames.includes('comments')) {
-    await db.createCollection('comments');
-    console.log('Created "comments" collection.');
-  }
-
-  // For orders collection
-  if (!collectionNames.includes('orders')) {
-    await db.createCollection('orders');
-    console.log('Created "orders" collection.');
-  }
-
-  console.log('All necessary collections checked and created if missing.');
 });
 
 // Mount controllers
@@ -69,6 +78,8 @@ app.use("/api/users", UserController);
 app.use("/api/books", BookController);
 app.use("/api/comments", CommentController);
 app.use("/api/orders", OrderController);
+app.use("/api/carts", CartController);
+app.use("/api/invoices", InvoiceController);
 
 // Add email routes
 app.post("/api/send-invoice-email", EmailController.sendInvoiceEmail);

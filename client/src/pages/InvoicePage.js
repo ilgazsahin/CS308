@@ -8,6 +8,7 @@ import axios from 'axios';
 const InvoicePage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const [invoice, setInvoice] = useState(null);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
@@ -19,26 +20,114 @@ const InvoicePage = () => {
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
-    if (!token) {
+    const userId = localStorage.getItem('userId');
+    if (!token || !userId) {
       navigate('/login');
       return;
     }
 
-    // Get order from localStorage
-    const orderData = localStorage.getItem(`order_${orderId}`);
-    if (orderData) {
+    const fetchOrderAndInvoice = async () => {
+      setLoading(true);
       try {
-        const parsedOrder = JSON.parse(orderData);
-        setOrder(parsedOrder);
-        // Pre-fill email field with order email if available
-        if (parsedOrder.shippingInfo && parsedOrder.shippingInfo.email) {
-          setEmail(parsedOrder.shippingInfo.email);
+        // First, try to find an existing invoice for this order
+        const response = await axios.get(`http://localhost:3001/api/orders/${orderId}`);
+        const orderData = response.data;
+        
+        if (orderData) {
+          setOrder(orderData);
+          
+          // Try to get or generate an invoice
+          try {
+            // Check if invoice exists
+            const invoiceResponse = await axios.get(`http://localhost:3001/api/invoices/order/${orderId}`);
+            
+            if (invoiceResponse.data) {
+              // Invoice exists
+              setInvoice(invoiceResponse.data);
+            } else {
+              // Generate a new invoice
+              const generatedInvoice = await axios.post(`http://localhost:3001/api/invoices/generate`, {
+                orderData
+              });
+              
+              setInvoice(generatedInvoice.data);
+            }
+            
+            // Pre-fill email field with order email if available
+            if (orderData.shippingInfo && orderData.shippingInfo.email) {
+              setEmail(orderData.shippingInfo.email);
+            }
+          } catch (error) {
+            console.error('Error fetching/generating invoice:', error);
+            
+            // Use order data directly if invoice API fails
+            setInvoice(null);
+          }
+        } else {
+          // As a fallback, try localStorage
+          const localOrderData = localStorage.getItem(`order_${orderId}`);
+          if (localOrderData) {
+            try {
+              const parsedOrder = JSON.parse(localOrderData);
+              setOrder(parsedOrder);
+              
+              // Try to generate a new invoice from localStorage data
+              try {
+                const generatedInvoice = await axios.post(`http://localhost:3001/api/invoices/generate`, {
+                  orderData: parsedOrder
+                });
+                
+                setInvoice(generatedInvoice.data);
+              } catch (invoiceError) {
+                console.error('Error generating invoice from local data:', invoiceError);
+                setInvoice(null);
+              }
+              
+              // Pre-fill email field with order email if available
+              if (parsedOrder.shippingInfo && parsedOrder.shippingInfo.email) {
+                setEmail(parsedOrder.shippingInfo.email);
+              }
+            } catch (parseError) {
+              console.error('Error parsing local order data:', parseError);
+              setOrder(null);
+              setInvoice(null);
+            }
+          } else {
+            // No order found
+            setOrder(null);
+            setInvoice(null);
+          }
         }
       } catch (error) {
-        console.error('Error parsing order data:', error);
+        console.error('Error fetching order:', error);
+        
+        // As a fallback, try localStorage
+        const localOrderData = localStorage.getItem(`order_${orderId}`);
+        if (localOrderData) {
+          try {
+            const parsedOrder = JSON.parse(localOrderData);
+            setOrder(parsedOrder);
+            setInvoice(null);
+            
+            // Pre-fill email field with order email if available
+            if (parsedOrder.shippingInfo && parsedOrder.shippingInfo.email) {
+              setEmail(parsedOrder.shippingInfo.email);
+            }
+          } catch (parseError) {
+            console.error('Error parsing local order data:', parseError);
+            setOrder(null);
+            setInvoice(null);
+          }
+        } else {
+          setOrder(null);
+          setInvoice(null);
+        }
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    fetchOrderAndInvoice();
   }, [orderId, navigate]);
 
   const formatDate = (dateString) => {
@@ -123,7 +212,10 @@ const InvoicePage = () => {
     );
   }
 
-  if (!order) {
+  // Use invoice data if available, otherwise fall back to order data
+  const displayData = invoice || order;
+
+  if (!displayData) {
     return (
       <div>
         <NavigationBar />
@@ -154,6 +246,15 @@ const InvoicePage = () => {
       </div>
     );
   }
+
+  // Invoice date - prefer invoice date if available, otherwise use order date
+  const invoiceDate = invoice ? invoice.invoiceDate : displayData.orderDate;
+  
+  // Items - prefer invoice items if available (they include subtotals), otherwise use order items
+  const items = invoice ? invoice.items : displayData.items;
+  
+  // Determine the invoice number
+  const invoiceNumber = invoice ? invoice.invoiceId : `INV-${displayData.orderId}`;
 
   return (
     <div>
@@ -188,7 +289,7 @@ const InvoicePage = () => {
                 marginBottom: "5px",
                 color: "var(--primary-color)"
               }}>INVOICE</h1>
-              <p style={{ color: "var(--light-text)" }}>#{order.orderId}</p>
+              <p style={{ color: "var(--light-text)" }}>{invoiceNumber}</p>
             </div>
             <div style={{ textAlign: "right" }}>
               <h2 style={{
@@ -199,8 +300,8 @@ const InvoicePage = () => {
                 color: "var(--primary-color)"
               }}>STORE 26</h2>
               <p style={{ marginBottom: "5px" }}>123 Book Street</p>
-              <p style={{ marginBottom: "5px" }}>New York, NY 10001</p>
-              <p style={{ marginBottom: "5px" }}>store26@example.com</p>
+              <p style={{ marginBottom: "5px" }}>Reading City, RC 12345</p>
+              <p style={{ marginBottom: "5px" }}>contact@store26.com</p>
               <p>+1 (212) 555-7890</p>
             </div>
           </div>
@@ -218,14 +319,14 @@ const InvoicePage = () => {
                 marginBottom: "15px",
                 color: "var(--primary-color)"
               }}>Bill To</h3>
-              <p style={{ marginBottom: "5px" }}>{order.shippingInfo.name}</p>
-              <p style={{ marginBottom: "5px" }}>{order.shippingInfo.address}</p>
+              <p style={{ marginBottom: "5px" }}>{displayData.shippingInfo.name}</p>
+              <p style={{ marginBottom: "5px" }}>{displayData.shippingInfo.address}</p>
               <p style={{ marginBottom: "5px" }}>
-                {order.shippingInfo.city}, {order.shippingInfo.state} {order.shippingInfo.zip}
+                {displayData.shippingInfo.city}, {displayData.shippingInfo.state} {displayData.shippingInfo.zip}
               </p>
-              <p style={{ marginBottom: "5px" }}>{order.shippingInfo.country}</p>
-              <p style={{ marginBottom: "5px" }}>{order.shippingInfo.email}</p>
-              <p>{order.shippingInfo.phone}</p>
+              <p style={{ marginBottom: "5px" }}>{displayData.shippingInfo.country}</p>
+              <p style={{ marginBottom: "5px" }}>{displayData.shippingInfo.email}</p>
+              <p>{displayData.shippingInfo.phone}</p>
             </div>
             <div style={{ textAlign: "right" }}>
               <h3 style={{
@@ -241,15 +342,25 @@ const InvoicePage = () => {
                       <strong>Invoice Date:</strong>
                     </td>
                     <td style={{ textAlign: "right", paddingBottom: "5px" }}>
-                      {formatDate(order.orderDate)}
+                      {formatDate(invoiceDate)}
                     </td>
                   </tr>
+                  {invoice && invoice.dueDate && (
+                    <tr>
+                      <td style={{ textAlign: "left", paddingRight: "20px", paddingBottom: "5px" }}>
+                        <strong>Due Date:</strong>
+                      </td>
+                      <td style={{ textAlign: "right", paddingBottom: "5px" }}>
+                        {formatDate(invoice.dueDate)}
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td style={{ textAlign: "left", paddingRight: "20px", paddingBottom: "5px" }}>
                       <strong>Order #:</strong>
                     </td>
                     <td style={{ textAlign: "right", paddingBottom: "5px" }}>
-                      {order.orderId}
+                      {displayData.orderId}
                     </td>
                   </tr>
                   <tr>
@@ -257,7 +368,7 @@ const InvoicePage = () => {
                       <strong>Payment Status:</strong>
                     </td>
                     <td style={{ textAlign: "right", paddingBottom: "5px", color: "#4b6043" }}>
-                      {order.status}
+                      {displayData.status}
                     </td>
                   </tr>
                 </tbody>
@@ -277,7 +388,7 @@ const InvoicePage = () => {
                 </tr>
               </thead>
               <tbody>
-                {order.items.map((item) => (
+                {items.map((item) => (
                   <tr key={item._id} style={{ borderBottom: "1px solid var(--border-color)" }}>
                     <td style={{ padding: "15px 5px" }}>
                       <div style={{ display: "flex", alignItems: "center" }}>
@@ -304,7 +415,7 @@ const InvoicePage = () => {
                       ${parseFloat(item.price).toFixed(2)}
                     </td>
                     <td style={{ textAlign: "right", padding: "15px 5px", fontWeight: "500" }}>
-                      ${(parseFloat(item.price) * item.quantity).toFixed(2)}
+                      ${item.subtotal ? parseFloat(item.subtotal).toFixed(2) : (parseFloat(item.price) * item.quantity).toFixed(2)}
                     </td>
                   </tr>
                 ))}
@@ -321,8 +432,19 @@ const InvoicePage = () => {
                 marginBottom: "10px"
               }}>
                 <span>Subtotal</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>${invoice ? invoice.subtotal.toFixed(2) : displayData.total.toFixed(2)}</span>
               </div>
+              
+              {invoice && invoice.tax > 0 && (
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between",
+                  marginBottom: "10px"
+                }}>
+                  <span>Tax</span>
+                  <span>${invoice.tax.toFixed(2)}</span>
+                </div>
+              )}
               
               <div style={{ 
                 display: "flex", 
@@ -343,7 +465,7 @@ const InvoicePage = () => {
                 fontSize: "1.1rem"
               }}>
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>${displayData.total.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -351,10 +473,10 @@ const InvoicePage = () => {
           {/* Thank You Note */}
           <div style={{ marginTop: "60px", textAlign: "center" }}>
             <p style={{ marginBottom: "10px", fontStyle: "italic" }}>
-              Thank you for shopping with STORE 26!
+              {invoice && invoice.notes ? invoice.notes : "Thank you for shopping with STORE 26!"}
             </p>
             <p style={{ fontSize: "0.9rem", color: "var(--light-text)" }}>
-              If you have any questions about this invoice, please contact us at store26@example.com
+              If you have any questions about this invoice, please contact us at contact@store26.com
             </p>
           </div>
         </div>

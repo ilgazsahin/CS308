@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import NavigationBar from './HomePage/NavigationBar';
 import Footer from '../components/Footer';
+import axios from 'axios';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
@@ -18,36 +19,21 @@ const OrderHistory = () => {
       return;
     }
 
-    // Retrieve orders from localStorage
-    const retrieveOrders = () => {
-      const allOrders = [];
-      
-      // Find all order items in localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('order_')) {
-          try {
-            const orderData = JSON.parse(localStorage.getItem(key));
-            
-            // Only include orders for the current user
-            if (orderData.userId === userId) {
-              allOrders.push(orderData);
-            }
-          } catch (error) {
-            console.error('Error parsing order data:', error);
-          }
-        }
+    // Fetch orders from MongoDB
+    const fetchOrdersFromMongoDB = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(`http://localhost:3001/api/orders/user/${userId}`);
+        setOrders(response.data);
+      } catch (error) {
+        console.error('Error fetching orders from MongoDB:', error);
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Sort orders by date (newest first)
-      allOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
-      
-      setOrders(allOrders);
-      setIsLoading(false);
     };
 
-    // Short timeout to ensure state variables are ready
-    setTimeout(retrieveOrders, 100);
+    fetchOrdersFromMongoDB();
   }, [navigate]);
 
   // Format date to a more readable format
@@ -283,6 +269,18 @@ const OrderHistory = () => {
                       textDecoration: "none",
                       fontSize: "0.9rem",
                       fontWeight: "500"
+                    }}
+                    onClick={async (e) => {
+                      // Try to ensure an invoice exists for this order before navigating
+                      try {
+                        // We'll generate the invoice in the background if it doesn't exist
+                        await axios.post(`http://localhost:3001/api/invoices/generate`, {
+                          orderData: order
+                        });
+                      } catch (error) {
+                        console.error('Error pre-generating invoice:', error);
+                        // Continue navigation even if this fails - the InvoicePage will handle it
+                      }
                     }}
                   >
                     VIEW INVOICE

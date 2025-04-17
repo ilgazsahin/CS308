@@ -62,50 +62,15 @@ const BookDetail = () => {
             }
             
             try {
-                // Search through user's orders in localStorage
-                let userHasPurchased = false;
+                // Check purchase status from MongoDB only
+                const response = await axios.get(`http://localhost:3001/api/orders/check-purchase`, {
+                    params: { userId, bookId: id }
+                });
                 
-                // Loop through localStorage to find orders for this user
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    
-                    if (key.startsWith('order_')) {
-                        try {
-                            const orderData = JSON.parse(localStorage.getItem(key));
-                            
-                            // Check if this order belongs to the current user
-                            if (orderData.userId === userId) {
-                                // Check if this book is in the order items
-                                const bookInOrder = orderData.items.some(item => item._id === id);
-                                
-                                if (bookInOrder) {
-                                    userHasPurchased = true;
-                                    break;
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error parsing order data:', error);
-                        }
-                    }
-                }
-                
-                // Also check server orders API if available
-                try {
-                    const response = await axios.get(`http://localhost:3001/api/orders/check-purchase`, {
-                        params: { userId, bookId: id }
-                    });
-                    
-                    if (response.data.hasPurchased) {
-                        userHasPurchased = true;
-                    }
-                } catch (error) {
-                    // If server-side check fails, rely on local check
-                    console.error("Error checking purchase status from server:", error);
-                }
-                
-                setHasPurchased(userHasPurchased);
+                setHasPurchased(response.data.hasPurchased);
             } catch (error) {
                 console.error("Error checking purchase status:", error);
+                setHasPurchased(false);
             } finally {
                 setIsCheckingPurchase(false);
             }
