@@ -1,9 +1,28 @@
 // OrderHistoryPage.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import NavigationBar from './HomePage/NavigationBar';
 import Footer from '../components/Footer';
 
 const OrderHistoryPage = () => {
+  const [orders, setOrders] = useState([]);
+  const userId = localStorage.getItem("userId");
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!userId) return;
+
+      try {
+        const res = await axios.get(`http://localhost:3001/api/orders/user/${userId}`);
+        setOrders(res.data);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+      }
+    };
+  
+    fetchOrders();
+  }, [userId]);
+
   return (
     <div>
       <NavigationBar />
