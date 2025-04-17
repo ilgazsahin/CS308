@@ -17,9 +17,11 @@ const BookDetail = () => {
     // New comment form fields
     const [text, setText] = useState("");
     const [rating, setRating] = useState(0);
-    
     // Button state
     const [showCheck, setShowCheck] = useState(false);
+    // Purchase verification
+    const [hasPurchased, setHasPurchased] = useState(false);
+    const [isCheckingPurchase, setIsCheckingPurchase] = useState(true);
 
     // Fetch the book details on mount/update
     useEffect(() => {
@@ -46,6 +48,71 @@ const BookDetail = () => {
         };
         fetchComments();
     }, [id]);
+    
+    // Check if user has purchased this book
+    useEffect(() => {
+        const checkPurchaseStatus = async () => {
+            setIsCheckingPurchase(true);
+            
+            const userId = localStorage.getItem("userId");
+            if (!userId) {
+                setHasPurchased(false);
+                setIsCheckingPurchase(false);
+                return;
+            }
+            
+            try {
+                // Search through user's orders in localStorage
+                let userHasPurchased = false;
+                
+                // Loop through localStorage to find orders for this user
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    
+                    if (key.startsWith('order_')) {
+                        try {
+                            const orderData = JSON.parse(localStorage.getItem(key));
+                            
+                            // Check if this order belongs to the current user
+                            if (orderData.userId === userId) {
+                                // Check if this book is in the order items
+                                const bookInOrder = orderData.items.some(item => item._id === id);
+                                
+                                if (bookInOrder) {
+                                    userHasPurchased = true;
+                                    break;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error parsing order data:', error);
+                        }
+                    }
+                }
+                
+                // Also check server orders API if available
+                try {
+                    const response = await axios.get(`http://localhost:3001/api/orders/check-purchase`, {
+                        params: { userId, bookId: id }
+                    });
+                    
+                    if (response.data.hasPurchased) {
+                        userHasPurchased = true;
+                    }
+                } catch (error) {
+                    // If server-side check fails, rely on local check
+                    console.error("Error checking purchase status from server:", error);
+                }
+                
+                setHasPurchased(userHasPurchased);
+            } catch (error) {
+                console.error("Error checking purchase status:", error);
+            } finally {
+                setIsCheckingPurchase(false);
+            }
+        };
+        
+        checkPurchaseStatus();
+    }, [id]);
 
     if (!book) return (
         <div>
@@ -63,6 +130,12 @@ const BookDetail = () => {
         const userId = localStorage.getItem("userId");
         if (!userId) {
             alert("You must be logged in first!");
+            return;
+        }
+        
+        // Check if user has purchased the book
+        if (!hasPurchased) {
+            alert("You can only review books you have purchased.");
             return;
         }
 
@@ -134,7 +207,7 @@ const BookDetail = () => {
                 <div style={{marginBottom: "40px"}}>
                     <Link to="/" style={{textDecoration: "none", color: "var(--light-text)"}}>Home</Link>
                     <span style={{margin: "0 10px", color: "var(--light-text)"}}>›</span>
-                    <Link to="/shop" style={{textDecoration: "none", color: "var(--light-text)"}}>Shop</Link>
+                    <Link to="/products" style={{textDecoration: "none", color: "var(--light-text)"}}>Products</Link>
                     <span style={{margin: "0 10px", color: "var(--light-text)"}}>›</span>
                     <span style={{color: "var(--primary-color)"}}>{book.title}</span>
                 </div>
@@ -301,77 +374,120 @@ const BookDetail = () => {
                             color: "var(--primary-color)"
                         }}>Add a Review</h3>
                         
-                        <form onSubmit={handleCommentSubmit}>
-                            <div style={{marginBottom: "20px"}}>
-                                <label style={{
-                                    display: "block", 
-                                    marginBottom: "10px",
-                                    color: "var(--primary-color)",
-                                    fontWeight: "500"
-                                }}>
-                                    Your Rating
-                                </label>
-                                <div style={{display: "flex", marginBottom: "10px"}}>
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button 
-                                            type="button"
-                                            key={star} 
-                                            onClick={() => setRating(star)}
-                                            style={{
-                                                color: star <= rating ? "var(--accent-color)" : "#ddd",
-                                                marginRight: "5px",
-                                                fontSize: "1.5rem",
-                                                background: "none",
-                                                border: "none",
-                                                cursor: "pointer"
-                                            }}
-                                        >
-                                            ★
-                                        </button>
-                                    ))}
-                                </div>
+                        {isCheckingPurchase ? (
+                            <p style={{marginBottom: "20px", color: "var(--light-text)"}}>
+                                Checking purchase status...
+                            </p>
+                        ) : !localStorage.getItem("userId") ? (
+                            <div style={{
+                                backgroundColor: "#f8f8f8",
+                                padding: "20px",
+                                marginBottom: "30px",
+                                borderRadius: "4px"
+                            }}>
+                                <p style={{marginBottom: "15px", color: "var(--primary-color)"}}>
+                                    Please <Link to="/login" style={{color: "var(--accent-color)", textDecoration: "none", fontWeight: "500"}}>login</Link> to leave a review.
+                                </p>
                             </div>
-                            
-                            <div style={{marginBottom: "20px"}}>
-                                <label style={{
-                                    display: "block", 
-                                    marginBottom: "10px",
-                                    color: "var(--primary-color)",
-                                    fontWeight: "500"
-                                }}>
-                                    Your Review
-                                </label>
-                                <textarea
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                    required
+                        ) : !hasPurchased ? (
+                            <div style={{
+                                backgroundColor: "#f8f8f8",
+                                padding: "20px",
+                                marginBottom: "30px",
+                                borderRadius: "4px"
+                            }}>
+                                <p style={{marginBottom: "15px", color: "var(--primary-color)"}}>
+                                    You can only review books you have purchased.
+                                </p>
+                                <button 
+                                    onClick={handleAddToCart}
                                     style={{
-                                        width: "100%",
-                                        padding: "15px",
-                                        border: "1px solid var(--border-color)",
-                                        borderRadius: "4px",
-                                        height: "150px",
-                                        resize: "vertical"
+                                        padding: "10px 20px",
+                                        backgroundColor: "var(--primary-color)",
+                                        color: "white",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        fontWeight: "500",
+                                        fontSize: "0.9rem",
+                                        borderRadius: "4px"
                                     }}
-                                />
+                                >
+                                    ADD TO CART
+                                </button>
                             </div>
-                            
-                            <button 
-                                type="submit" 
-                                className="btn btn-primary"
-                                style={{
-                                    padding: "12px 25px",
-                                    backgroundColor: "var(--primary-color)",
-                                    color: "white",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    fontWeight: "500",
-                                    fontSize: "0.9rem"
-                                }}
-                            >
-                                SUBMIT REVIEW
-                            </button>
-                        </form>
+                        ) : (
+                            <form onSubmit={handleCommentSubmit}>
+                                <div style={{marginBottom: "20px"}}>
+                                    <label style={{
+                                        display: "block", 
+                                        marginBottom: "10px",
+                                        color: "var(--primary-color)",
+                                        fontWeight: "500"
+                                    }}>
+                                        Your Rating
+                                    </label>
+                                    <div style={{display: "flex", marginBottom: "10px"}}>
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button 
+                                                type="button"
+                                                key={star} 
+                                                onClick={() => setRating(star)}
+                                                style={{
+                                                    color: star <= rating ? "var(--accent-color)" : "#ddd",
+                                                    marginRight: "5px",
+                                                    fontSize: "1.5rem",
+                                                    background: "none",
+                                                    border: "none",
+                                                    cursor: "pointer"
+                                                }}
+                                            >
+                                                ★
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div style={{marginBottom: "20px"}}>
+                                    <label style={{
+                                        display: "block", 
+                                        marginBottom: "10px",
+                                        color: "var(--primary-color)",
+                                        fontWeight: "500"
+                                    }}>
+                                        Your Review
+                                    </label>
+                                    <textarea
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                        required
+                                        style={{
+                                            width: "100%",
+                                            padding: "15px",
+                                            border: "1px solid var(--border-color)",
+                                            borderRadius: "4px",
+                                            height: "150px",
+                                            resize: "vertical"
+                                        }}
+                                    />
+                                </div>
+                                
+                                <button 
+                                    type="submit" 
+                                    className="btn btn-primary"
+                                    style={{
+                                        padding: "12px 25px",
+                                        backgroundColor: "var(--primary-color)",
+                                        color: "white",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        fontWeight: "500",
+                                        fontSize: "0.9rem"
+                                    }}
+                                >
+                                    SUBMIT REVIEW
+                                </button>
+                            </form>
+                        )}
                     </div>
                 </div>
             </div>

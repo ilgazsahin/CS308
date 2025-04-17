@@ -12,6 +12,7 @@ const UserController = require("./Controller/UserController");
 const BookController = require("./Controller/BookController");
 const CommentController = require("./Controller/CommentController");
 const EmailController = require("./Controller/EmailController");
+const OrderController = require("./Controller/OrderController");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -53,17 +54,21 @@ mongoose.connection.once('open', async () => {
     console.log('Created "comments" collection.');
   }
 
+  // For orders collection
+  if (!collectionNames.includes('orders')) {
+    await db.createCollection('orders');
+    console.log('Created "orders" collection.');
+  }
+
   console.log('All necessary collections checked and created if missing.');
 });
-const OrderController = require("./Controller/OrderController");
-app.use("/api/orders", OrderController);
-
 
 // Mount controllers
 // Make sure your frontend requests match these paths (e.g., "/api/users/login")
 app.use("/api/users", UserController);
 app.use("/api/books", BookController);
 app.use("/api/comments", CommentController);
+app.use("/api/orders", OrderController);
 
 // Add email routes
 app.post("/api/send-invoice-email", EmailController.sendInvoiceEmail);
