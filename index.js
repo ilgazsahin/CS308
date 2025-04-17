@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb://localhost:27017/User", {
+mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })

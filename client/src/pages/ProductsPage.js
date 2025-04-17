@@ -3,13 +3,16 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
+import { FaSearch } from "react-icons/fa";
 
 const ProductsPage = () => {
     const [books, setBooks] = useState([]);
     const [displayedBooks, setDisplayedBooks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [sortOption, setSortOption] = useState("default"); // default, name-asc, name-desc, price-asc, price-desc
-    
+    const [sortOption, setSortOption] = useState("default"); // default, name-asc, name-desc, price-asc, price-desc, rating-desc, rating-asc
+    const [searchQuery, setSearchQuery] = useState(""); // New state for search query
+    const [bookRatings, setBookRatings] = useState({}); // Store book ratings
+
     useEffect(() => {
         async function fetchBooks() {
             try {
@@ -18,6 +21,9 @@ const ProductsPage = () => {
                 // Only use real books from the database
                 setBooks(response.data);
                 setDisplayedBooks(response.data);
+
+                // Fetch ratings for all books
+                fetchBookRatings(response.data);
             } catch (error) {
                 console.error("An error occurred while fetching books:", error);
                 setBooks([]);
@@ -29,12 +35,65 @@ const ProductsPage = () => {
         fetchBooks();
     }, []);
 
+    // Fetch ratings for all books
+    const fetchBookRatings = async (bookList) => {
+        try {
+            const ratingsObj = {};
+
+            // Fetch ratings for each book
+            for (const book of bookList) {
+                try {
+                    const response = await axios.get(`http://localhost:3001/api/comments/${book._id}`);
+                    const comments = response.data;
+
+                    // Calculate average rating
+                    if (comments.length > 0) {
+                        const totalRating = comments.reduce((sum, comment) => sum + (comment.rating || 0), 0);
+                        const averageRating = totalRating / comments.length;
+                        ratingsObj[book._id] = averageRating;
+                    } else {
+                        ratingsObj[book._id] = 0; // No ratings yet
+                    }
+                } catch (err) {
+                    console.error(`Error fetching ratings for book ${book._id}:`, err);
+                    ratingsObj[book._id] = 0;
+                }
+            }
+
+            setBookRatings(ratingsObj);
+        } catch (error) {
+            console.error("Error fetching book ratings:", error);
+        }
+    };
+
+    // Filter books based on search query and apply sorting
+    useEffect(() => {
+        let filteredBooks = [...books];
+
+        // Filter by search query if not empty
+        if (searchQuery.trim() !== "") {
+            const query = searchQuery.toLowerCase();
+            filteredBooks = filteredBooks.filter(book =>
+                book.title.toLowerCase().includes(query) ||
+                (book.author && book.author.toLowerCase().includes(query)) ||
+                (book.description && book.description.toLowerCase().includes(query))
+            );
+        }
+
+        // Apply current sort option to filtered books
+        sortBooks(filteredBooks);
+    }, [searchQuery, books, sortOption, bookRatings]);
+
     // Handle sorting
     const handleSort = (option) => {
         setSortOption(option);
-        
-        let sortedBooks = [...books];
-        
+        sortBooks([...displayedBooks], option);
+    };
+
+    // Sort books helper function
+    const sortBooks = (booksToSort, option = sortOption) => {
+        let sortedBooks = [...booksToSort];
+
         switch (option) {
             case "name-asc":
                 sortedBooks.sort((a, b) => a.title.localeCompare(b.title));
@@ -56,27 +115,88 @@ const ProductsPage = () => {
                     return priceB - priceA;
                 });
                 break;
+            case "rating-desc": // Most popular (highest rating) first
+                sortedBooks.sort((a, b) => {
+                    const ratingA = bookRatings[a._id] || 0;
+                    const ratingB = bookRatings[b._id] || 0;
+                    return ratingB - ratingA;
+                });
+                break;
+            case "rating-asc": // Least popular (lowest rating) first
+                sortedBooks.sort((a, b) => {
+                    const ratingA = bookRatings[a._id] || 0;
+                    const ratingB = bookRatings[b._id] || 0;
+                    return ratingA - ratingB;
+                });
+                break;
             default:
                 // Default order (as returned from API)
-                sortedBooks = [...books];
+                break;
         }
-        
+
         setDisplayedBooks(sortedBooks);
+    };
+
+    // Handle search input change
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    // Handle search form submit
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        // Search is already handled by the useEffect
+    };
+
+    // Function to render rating stars
+    const renderRatingStars = (bookId) => {
+        const rating = bookRatings[bookId] || 0;
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 >= 0.5;
+
+        return (
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: "10px",
+                color: "#FFD700" // Gold color for stars
+            }}>
+                {[...Array(5)].map((_, i) => {
+                    if (i < fullStars) {
+                        return <span key={i}>★</span>; // Full star
+                    } else if (i === fullStars && hasHalfStar) {
+                        return <span key={i}>⯨</span>; // Half star (approximation)
+                    } else {
+                        return <span key={i} style={{ color: "#e0e0e0" }}>☆</span>; // Empty star
+                    }
+                })}
+                {rating > 0 && (
+                    <span style={{
+                        fontSize: "0.8rem",
+                        marginLeft: "5px",
+                        color: "var(--light-text)"
+                    }}>
+                        ({rating.toFixed(1)})
+                    </span>
+                )}
+            </div>
+        );
     };
 
     return (
         <div style={{ backgroundColor: "var(--light-bg)", minHeight: "100vh" }}>
             <NavigationBar />
-            
+
             <div className="container" style={{padding: "60px 0"}}>
                 {/* Breadcrumb */}
                 <div style={{
-                    marginBottom: "20px", 
+                    marginBottom: "20px",
                     textAlign: "center",
                     fontFamily: "'Inter', sans-serif"
                 }}>
                     <Link to="/" style={{
-                        textDecoration: "none", 
+                        textDecoration: "none",
                         color: "var(--light-text)",
                         fontSize: "0.9rem"
                     }}>Home</Link>
@@ -86,59 +206,110 @@ const ProductsPage = () => {
                         fontSize: "0.9rem"
                     }}>Products</span>
                 </div>
-                
+
                 <h1 style={{
                     fontFamily: "'Playfair Display', serif",
                     fontSize: "2.8rem",
                     fontWeight: "500",
-                    marginBottom: "50px",
+                    marginBottom: "30px",
                     color: "var(--primary-color)",
                     textAlign: "center"
                 }}>All Products</h1>
-                
+
+                {/* Search Bar */}
+                {!loading && (
+                    <div style={{
+                        maxWidth: "500px",
+                        margin: "0 auto 40px auto"
+                    }}>
+                        <form onSubmit={handleSearchSubmit} style={{
+                            display: "flex",
+                            width: "100%",
+                            alignItems: "center",
+                            position: "relative"
+                        }}>
+                            <input
+                                type="text"
+                                placeholder="Search by title, author, or description..."
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                                style={{
+                                    width: "100%",
+                                    padding: "12px 20px",
+                                    border: "1px solid var(--border-color)",
+                                    borderRadius: "4px",
+                                    fontSize: "0.95rem",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+                                }}
+                            />
+                            <button
+                                type="submit"
+                                style={{
+                                    position: "absolute",
+                                    right: "15px",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    color: "var(--primary-color)",
+                                    fontSize: "1rem"
+                                }}
+                            >
+                                <FaSearch />
+                            </button>
+                        </form>
+                    </div>
+                )}
+
                 {/* Sorting UI */}
                 {!loading && books.length > 0 && (
                     <div style={{
                         display: "flex",
-                        justifyContent: "flex-end",
+                        justifyContent: "space-between",
                         marginBottom: "30px",
                         alignItems: "center"
                     }}>
-                        <span style={{
-                            marginRight: "10px", 
-                            color: "var(--primary-color)",
-                            fontWeight: "500",
-                            fontSize: "1rem"
-                        }}>Sort by:</span>
-                        <select 
-                            value={sortOption}
-                            onChange={(e) => handleSort(e.target.value)}
-                            style={{
-                                padding: "8px 12px",
-                                border: "1px solid #ddd",
-                                borderRadius: "3px",
-                                backgroundColor: "white",
+                        <div>
+                            {displayedBooks.length} {displayedBooks.length === 1 ? 'book' : 'books'} found
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                            <span style={{
+                                marginRight: "10px",
                                 color: "var(--primary-color)",
-                                cursor: "pointer",
-                                fontFamily: "inherit",
-                                fontSize: "0.9rem",
-                                minWidth: "180px",
-                                appearance: "none",
-                                backgroundImage: "url('data:image/svg+xml;utf8,<svg fill=\"%23555\" height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 10l5 5 5-5z\"/><path d=\"M0 0h24v24H0z\" fill=\"none\"/></svg>')",
-                                backgroundRepeat: "no-repeat",
-                                backgroundPosition: "right 8px center",
-                                paddingRight: "30px"
-                            }}
-                        >
-                            <option value="default">Default</option>
-                            <option value="name-asc">Name (A-Z)</option>
-                            <option value="name-desc">Name (Z-A)</option>
-                            <option value="price-asc">Price (Low to High)</option>
-                            <option value="price-desc">Price (High to Low)</option>
-                        </select>
+                                fontWeight: "500",
+                                fontSize: "1rem"
+                            }}>Sort by:</span>
+                            <select
+                                value={sortOption}
+                                onChange={(e) => handleSort(e.target.value)}
+                                style={{
+                                    padding: "8px 12px",
+                                    border: "1px solid #ddd",
+                                    borderRadius: "3px",
+                                    backgroundColor: "white",
+                                    color: "var(--primary-color)",
+                                    cursor: "pointer",
+                                    fontFamily: "inherit",
+                                    fontSize: "0.9rem",
+                                    minWidth: "180px",
+                                    appearance: "none",
+                                    backgroundImage: "url('data:image/svg+xml;utf8,<svg fill=\"%23555\" height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 10l5 5 5-5z\"/><path d=\"M0 0h24v24H0z\" fill=\"none\"/></svg>')",
+                                    backgroundRepeat: "no-repeat",
+                                    backgroundPosition: "right 8px center",
+                                    paddingRight: "30px"
+                                }}
+                            >
+                                <option value="default">Default</option>
+                                <option value="rating-desc">Most Popular</option>
+                                <option value="rating-asc">Least Popular</option>
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="price-asc">Price (Low to High)</option>
+                                <option value="price-desc">Price (High to Low)</option>
+                            </select>
+                        </div>
                     </div>
                 )}
-                
+
                 {loading ? (
                     <div style={{textAlign: "center", padding: "50px 0"}}>
                         <p>Loading products...</p>
@@ -188,8 +359,8 @@ const ProductsPage = () => {
                                             }}
                                         />
                                     </div>
-                                    <div style={{ 
-                                        padding: "20px 15px", 
+                                    <div style={{
+                                        padding: "20px 15px",
                                         textAlign: "center",
                                         flexGrow: 1,
                                         display: "flex",
@@ -207,8 +378,9 @@ const ProductsPage = () => {
                                             <p style={{
                                                 fontSize: "0.9rem",
                                                 color: "var(--light-text)",
-                                                marginBottom: "15px"
+                                                marginBottom: "5px"
                                             }}>{book.author}</p>
+                                            {renderRatingStars(book._id)}
                                         </div>
                                         <p style={{
                                             fontSize: "1rem",
@@ -222,20 +394,42 @@ const ProductsPage = () => {
                     </div>
                 ) : (
                     <div style={{
-                        textAlign: "center", 
-                        padding: "50px 0", 
+                        textAlign: "center",
+                        padding: "50px 0",
                         backgroundColor: "white",
                         marginBottom: "50px"
                     }}>
-                        <p style={{marginBottom: "20px"}}>No products found in the database.</p>
-                        <p>Please make sure your MongoDB database is properly set up and contains books in the 'books' collection.</p>
+                        {searchQuery ? (
+                            <div>
+                                <p style={{marginBottom: "20px"}}>No books found matching "{searchQuery}"</p>
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    style={{
+                                        padding: "10px 20px",
+                                        backgroundColor: "var(--primary-color)",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontWeight: "500"
+                                    }}
+                                >
+                                    Clear Search
+                                </button>
+                            </div>
+                        ) : (
+                            <div>
+                                <p style={{marginBottom: "20px"}}>No products found in the database.</p>
+                                <p>Please make sure your MongoDB database is properly set up and contains books in the 'books' collection.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
-            
+
             <Footer />
         </div>
     );
 };
 
-export default ProductsPage; 
+export default ProductsPage;
