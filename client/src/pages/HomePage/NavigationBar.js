@@ -1,12 +1,14 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaSearch, FaShoppingCart } from "react-icons/fa";
+import { useCart } from "../../components/CartContext";
 
 const NavigationBar = () => {
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const token = localStorage.getItem("token");
     const userName = localStorage.getItem("userName");
+    const { cartCount, cartTotal } = useCart();
 
     const handleToggle = () => {
         setIsOpen((prev) => !prev);
@@ -70,6 +72,18 @@ const NavigationBar = () => {
                                         }}>
                                             <p style={{ margin: 0, fontWeight: "500" }}>Hello, {userName || "User"}</p>
                                             <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            <Link
+                                                to="/orders"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Order History
+                                            </Link>
+                                            <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
                                             <button
                                                 onClick={() => {
                                                     handleLogout();
@@ -131,7 +145,7 @@ const NavigationBar = () => {
                             gap: "5px"
                         }}>
                             <FaShoppingCart />
-                            CART (0$)
+                            CART ({cartCount > 0 ? `$${cartTotal.toFixed(2)}` : "0"})
                         </Link>
                         <Link to="#" style={{ 
                             textDecoration: "none", 
