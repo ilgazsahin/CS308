@@ -1,60 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-
-// Define Order Schema if not already defined in models
-const OrderSchema = new mongoose.Schema({
-    orderId: {
-        type: Number,
-        required: true
-    },
-    orderNumber: {
-        type: Number,
-        required: true
-    },
-    orderDate: {
-        type: Date,
-        default: Date.now
-    },
-    userId: {
-        type: String,
-        required: true
-    },
-    items: [{
-        _id: String,
-        title: String,
-        author: String,
-        price: Number,
-        image: String,
-        quantity: Number
-    }],
-    shippingInfo: {
-        name: String,
-        email: String,
-        address: String,
-        city: String,
-        state: String,
-        zip: String,
-        country: String,
-        phone: String
-    },
-    total: {
-        type: Number,
-        required: true
-    },
-    status: {
-        type: String,
-        default: 'Pending'
-    }
-}, { timestamps: true });
-
-// Create Order model if not exists
-let OrderModel;
-try {
-    OrderModel = mongoose.model('Order');
-} catch (error) {
-    OrderModel = mongoose.model('Order', OrderSchema);
-}
+const OrderModel = require("../Models/OrderModel");
 
 // Create a new order
 router.post("/", async (req, res) => {

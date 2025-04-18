@@ -1,38 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-
-// Define Cart Schema
-const CartSchema = new mongoose.Schema({
-    userId: {
-        type: String,
-        required: true
-    },
-    items: [{
-        _id: String,
-        title: String,
-        author: String,
-        price: Number,
-        image: String,
-        quantity: Number
-    }],
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-// Create Cart model
-let CartModel;
-try {
-    CartModel = mongoose.model('Cart');
-} catch (error) {
-    CartModel = mongoose.model('Cart', CartSchema);
-}
+const CartModel = require("../Models/CartModel");
 
 // Get cart for a specific user
 router.get("/:userId", async (req, res) => {
