@@ -66,75 +66,64 @@ const ProductsPage = () => {
         }
     };
 
-    // Filter books based on search query and apply sorting
-    useEffect(() => {
-        let filteredBooks = [...books];
-
-        // Filter by search query if not empty
-        if (searchQuery.trim() !== "") {
-            const query = searchQuery.toLowerCase();
-            filteredBooks = filteredBooks.filter(book =>
-                book.title.toLowerCase().includes(query) ||
-                (book.author && book.author.toLowerCase().includes(query)) ||
-                (book.description && book.description.toLowerCase().includes(query))
-            );
-        }
-
-        // Apply current sort option to filtered books
-        sortBooks(filteredBooks);
-    }, [searchQuery, books, sortOption, bookRatings]);
-
-    // Handle sorting
+    // Handle sort changes
     const handleSort = (option) => {
         setSortOption(option);
-        sortBooks([...displayedBooks], option);
+        setDisplayedBooks(sortBooks(filterBooksBySearch(books, searchQuery), option));
     };
+    
+    // Search functionality
+    const filterBooksBySearch = (booksToFilter, query) => {
+        if (!query) return booksToFilter;
+        
+        const searchTerms = query.toLowerCase().trim().split(' ');
+        return booksToFilter.filter(book => {
+            const searchString = `${book.title} ${book.author} ${book.description || ''}`.toLowerCase();
+            return searchTerms.some(term => searchString.includes(term));
+        });
+    };
+    
+    // Apply search and sort when books data or search query changes
+    useEffect(() => {
+        if (books.length > 0) {
+            const filteredBooks = filterBooksBySearch(books, searchQuery);
+            setDisplayedBooks(sortBooks(filteredBooks));
+        }
+    }, [books, searchQuery]);
 
     // Sort books helper function
     const sortBooks = (booksToSort, option = sortOption) => {
-        let sortedBooks = [...booksToSort];
-
+        const booksCopy = [...booksToSort];
+        
         switch (option) {
-            case "name-asc":
-                sortedBooks.sort((a, b) => a.title.localeCompare(b.title));
-                break;
-            case "name-desc":
-                sortedBooks.sort((a, b) => b.title.localeCompare(a.title));
-                break;
-            case "price-asc":
-                sortedBooks.sort((a, b) => {
-                    const priceA = a.price || 0;
-                    const priceB = b.price || 0;
-                    return priceA - priceB;
-                });
-                break;
-            case "price-desc":
-                sortedBooks.sort((a, b) => {
-                    const priceA = a.price || 0;
-                    const priceB = b.price || 0;
-                    return priceB - priceA;
-                });
-                break;
-            case "rating-desc": // Most popular (highest rating) first
-                sortedBooks.sort((a, b) => {
-                    const ratingA = bookRatings[a._id] || 0;
-                    const ratingB = bookRatings[b._id] || 0;
-                    return ratingB - ratingA;
-                });
-                break;
-            case "rating-asc": // Least popular (lowest rating) first
-                sortedBooks.sort((a, b) => {
-                    const ratingA = bookRatings[a._id] || 0;
-                    const ratingB = bookRatings[b._id] || 0;
-                    return ratingA - ratingB;
-                });
-                break;
+            case 'rating-desc':
+                // Sort by highest rating first
+                return booksCopy.sort((a, b) => (bookRatings[b._id] || 0) - (bookRatings[a._id] || 0));
+            case 'rating-asc':
+                // Sort by lowest rating first
+                return booksCopy.sort((a, b) => (bookRatings[a._id] || 0) - (bookRatings[b._id] || 0));
+            case 'name-asc':
+                // Sort alphabetically by title
+                return booksCopy.sort((a, b) => a.title.localeCompare(b.title));
+            case 'name-desc':
+                // Sort reverse alphabetically by title
+                return booksCopy.sort((a, b) => b.title.localeCompare(a.title));
+            case 'price-asc':
+                // Sort by lowest price first
+                return booksCopy.sort((a, b) => (a.price || 0) - (b.price || 0));
+            case 'price-desc':
+                // Sort by highest price first
+                return booksCopy.sort((a, b) => (b.price || 0) - (a.price || 0));
+            case 'stock-asc':
+                // Sort by lowest stock first
+                return booksCopy.sort((a, b) => (a.stock || 0) - (b.stock || 0));
+            case 'stock-desc':
+                // Sort by highest stock first
+                return booksCopy.sort((a, b) => (b.stock || 0) - (a.stock || 0));
             default:
-                // Default order (as returned from API)
-                break;
+                // Default sorting (keep original order)
+                return booksCopy;
         }
-
-        setDisplayedBooks(sortedBooks);
     };
 
     // Handle search input change
@@ -182,6 +171,48 @@ const ProductsPage = () => {
                 )}
             </div>
         );
+    };
+
+    // Add this function to display stock status badge
+    const getStockBadge = (stock) => {
+        if (stock === undefined || stock === null) return null;
+        
+        if (stock <= 0) {
+            return (
+                <div style={{
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    backgroundColor: "#fbe9e7",
+                    color: "#d32f2f",
+                    padding: "5px 10px",
+                    borderRadius: "4px",
+                    fontWeight: "500",
+                    fontSize: "0.8rem",
+                    zIndex: 2
+                }}>
+                    Out of Stock
+                </div>
+            );
+        } else if (stock < 5) {
+            return (
+                <div style={{
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    backgroundColor: "#fff8e1",
+                    color: "#f57c00",
+                    padding: "5px 10px",
+                    borderRadius: "4px",
+                    fontWeight: "500",
+                    fontSize: "0.8rem",
+                    zIndex: 2
+                }}>
+                    Low Stock: {stock}
+                </div>
+            );
+        }
+        return null;
     };
 
     return (
@@ -305,6 +336,8 @@ const ProductsPage = () => {
                                 <option value="name-desc">Name (Z-A)</option>
                                 <option value="price-asc">Price (Low to High)</option>
                                 <option value="price-desc">Price (High to Low)</option>
+                                <option value="stock-asc">Stock (Low to High)</option>
+                                <option value="stock-desc">Stock (High to Low)</option>
                             </select>
                         </div>
                     </div>
@@ -349,6 +382,7 @@ const ProductsPage = () => {
                                         position: "relative",
                                         flexGrow: 0
                                     }}>
+                                        {getStockBadge(book.stock)}
                                         <img
                                             src={book.image}
                                             alt={book.title}

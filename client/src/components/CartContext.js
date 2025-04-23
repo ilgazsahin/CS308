@@ -142,17 +142,34 @@ export const CartProvider = ({ children }) => {
   }, [cartItems, isLoggedIn, userId]);
 
   // Function to add an item to the cart
-  const addToCart = (product) => {
+  const addToCart = async (product) => {
+    // First check if the product has stock information
+    if (product.stock !== undefined && product.stock <= 0) {
+      // Item is out of stock, show error and don't add
+      alert(`Sorry, "${product.title}" is out of stock.`);
+      return false;
+    }
+    
     setCartItems(prevItems => {
       // Check if the item is already in the cart
       const existingItemIndex = prevItems.findIndex(item => item._id === product._id);
       
       if (existingItemIndex >= 0) {
-        // Item exists, increase quantity
+        // Item exists, check if requested quantity exceeds stock
+        const currentQuantity = prevItems[existingItemIndex].quantity;
+        const newQuantity = currentQuantity + 1;
+        
+        // If we have stock info, ensure we don't exceed it
+        if (product.stock !== undefined && newQuantity > product.stock) {
+          alert(`Sorry, only ${product.stock} units of "${product.title}" are available. You already have ${currentQuantity} in your cart.`);
+          return prevItems; // Don't update
+        }
+        
+        // Stock is available or not tracked, increase quantity
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + 1
+          quantity: newQuantity
         };
         return updatedItems;
       } else {
@@ -160,20 +177,36 @@ export const CartProvider = ({ children }) => {
         return [...prevItems, { ...product, quantity: 1 }];
       }
     });
+    
+    return true; // Successfully added
   };
 
   // Function to update item quantity
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = async (productId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(productId);
-      return;
+      return true;
     }
     
-    setCartItems(prevItems => {
-      return prevItems.map(item => 
-        item._id === productId ? { ...item, quantity } : item
-      );
-    });
+    // Check if the new quantity exceeds stock
+    const existingItem = cartItems.find(item => item._id === productId);
+    if (existingItem) {
+      // If the product has stock info, check if quantity exceeds it
+      if (existingItem.stock !== undefined && quantity > existingItem.stock) {
+        alert(`Sorry, only ${existingItem.stock} units of "${existingItem.title}" are available.`);
+        return false;
+      }
+      
+      // Stock is available or not tracked, update quantity
+      setCartItems(prevItems => {
+        return prevItems.map(item => 
+          item._id === productId ? { ...item, quantity } : item
+        );
+      });
+      return true;
+    }
+    
+    return false;
   };
 
   // Function to remove an item from the cart

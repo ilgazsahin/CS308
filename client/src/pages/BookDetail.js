@@ -62,15 +62,50 @@ const BookDetail = () => {
             }
             
             try {
-                // Check purchase status from MongoDB only
-                const response = await axios.get(`http://localhost:3001/api/orders/check-purchase`, {
-                    params: { userId, bookId: id }
-                });
+                // Search through user's orders in localStorage
+                let userHasPurchased = false;
                 
-                setHasPurchased(response.data.hasPurchased);
+                // Loop through localStorage to find orders for this user
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    
+                    if (key.startsWith('order_')) {
+                        try {
+                            const orderData = JSON.parse(localStorage.getItem(key));
+                            
+                            // Check if this order belongs to the current user
+                            if (orderData.userId === userId) {
+                                // Check if this book is in the order items
+                                const bookInOrder = orderData.items.some(item => item._id === id);
+                                
+                                if (bookInOrder) {
+                                    userHasPurchased = true;
+                                    break;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error parsing order data:', error);
+                        }
+                    }
+                }
+                
+                // Also check server orders API if available
+                try {
+                    const response = await axios.get(`http://localhost:3001/api/orders/check-purchase`, {
+                        params: { userId, bookId: id }
+                    });
+                    
+                    if (response.data.hasPurchased) {
+                        userHasPurchased = true;
+                    }
+                } catch (error) {
+                    // If server-side check fails, rely on local check
+                    console.error("Error checking purchase status from server:", error);
+                }
+                
+                setHasPurchased(userHasPurchased);
             } catch (error) {
                 console.error("Error checking purchase status:", error);
-                setHasPurchased(false);
             } finally {
                 setIsCheckingPurchase(false);
             }
@@ -127,6 +162,12 @@ const BookDetail = () => {
     };
 
     const handleAddToCart = () => {
+        // Don't allow adding to cart if out of stock
+        if (!book.stock || book.stock <= 0) {
+            alert("Sorry, this book is currently out of stock.");
+            return;
+        }
+        
         // Add to cart first
         addToCart(book);
         
@@ -137,6 +178,55 @@ const BookDetail = () => {
         setTimeout(() => {
             setShowCheck(false);
         }, 2000);
+    };
+
+    // Helper function to display stock status
+    const getStockStatus = () => {
+        if (book.stock === undefined) return null;
+        
+        if (book.stock <= 0) {
+            return (
+                <div style={{
+                    backgroundColor: "#fbe9e7",
+                    color: "#d32f2f",
+                    padding: "10px 15px",
+                    borderRadius: "4px",
+                    fontWeight: "500",
+                    marginTop: "15px",
+                    display: "inline-block"
+                }}>
+                    Out of Stock
+                </div>
+            );
+        } else if (book.stock < 5) {
+            return (
+                <div style={{
+                    backgroundColor: "#fff8e1",
+                    color: "#f57c00",
+                    padding: "10px 15px",
+                    borderRadius: "4px",
+                    fontWeight: "500",
+                    marginTop: "15px",
+                    display: "inline-block"
+                }}>
+                    Low Stock: Only {book.stock} left
+                </div>
+            );
+        } else {
+            return (
+                <div style={{
+                    backgroundColor: "#e8f5e9",
+                    color: "#388e3c",
+                    padding: "10px 15px",
+                    borderRadius: "4px",
+                    fontWeight: "500",
+                    marginTop: "15px",
+                    display: "inline-block"
+                }}>
+                    In Stock: {book.stock} available
+                </div>
+            );
+        }
     };
 
     return (
@@ -236,6 +326,9 @@ const BookDetail = () => {
                             }}><strong>Published:</strong> {book.publishedYear}</p>
                         )}
                         
+                        {/* Stock Status */}
+                        {getStockStatus()}
+                        
                         <div style={{
                             width: "40px",
                             height: "3px",
@@ -252,13 +345,14 @@ const BookDetail = () => {
                         <div style={{display: "flex", gap: "15px", marginTop: "30px"}}>
                             <button 
                                 onClick={handleAddToCart}
+                                disabled={!book.stock || book.stock <= 0}
                                 className={`btn btn-primary add-cart-btn ${showCheck ? 'added' : ''}`}
                                 style={{
                                     padding: "12px 25px",
-                                    backgroundColor: "var(--primary-color)",
+                                    backgroundColor: !book.stock || book.stock <= 0 ? "#cccccc" : "var(--primary-color)",
                                     color: "white",
                                     border: "none",
-                                    cursor: "pointer",
+                                    cursor: !book.stock || book.stock <= 0 ? "not-allowed" : "pointer",
                                     fontWeight: "500",
                                     fontSize: "0.9rem",
                                     position: "relative",
@@ -270,7 +364,7 @@ const BookDetail = () => {
                                     <span className="check-icon">
                                         ✓ ADDED
                                     </span>
-                                ) : "ADD TO CART"}
+                                ) : !book.stock || book.stock <= 0 ? "OUT OF STOCK" : "ADD TO CART"}
                             </button>
                             
                             <button className="btn" style={{
@@ -366,18 +460,19 @@ const BookDetail = () => {
                                 </p>
                                 <button 
                                     onClick={handleAddToCart}
+                                    disabled={!book.stock || book.stock <= 0}
                                     style={{
                                         padding: "10px 20px",
-                                        backgroundColor: "var(--primary-color)",
+                                        backgroundColor: !book.stock || book.stock <= 0 ? "#cccccc" : "var(--primary-color)",
                                         color: "white",
                                         border: "none",
-                                        cursor: "pointer",
+                                        cursor: !book.stock || book.stock <= 0 ? "not-allowed" : "pointer",
                                         fontWeight: "500",
                                         fontSize: "0.9rem",
                                         borderRadius: "4px"
                                     }}
                                 >
-                                    ADD TO CART
+                                    {!book.stock || book.stock <= 0 ? "OUT OF STOCK" : "ADD TO CART"}
                                 </button>
                             </div>
                         ) : (

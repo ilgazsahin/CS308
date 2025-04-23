@@ -1,14 +1,42 @@
 const express = require("express");
 const router = express.Router();
 const OrderModel = require("../Models/OrderModel");
+const axios = require("axios");
 
 // Create a new order
 router.post("/", async (req, res) => {
     try {
         const orderData = req.body;
-        const newOrder = await OrderModel.create(orderData);
-        res.status(201).json(newOrder);
+        
+        // First, check and update stock levels
+        try {
+            // Make a request to decrease stock for all ordered items
+            const stockResponse = await axios.post('http://localhost:3001/api/books/decrease-stock', {
+                items: orderData.items
+            });
+            
+            // If we get here, stock update was successful
+            
+            // Now create the order
+            const newOrder = await OrderModel.create(orderData);
+            
+            // Return both the order and stock update information
+            res.status(201).json({
+                order: newOrder,
+                stockUpdates: stockResponse.data.updates
+            });
+        } catch (stockError) {
+            // If the stock update failed, return error
+            if (stockError.response && stockError.response.data) {
+                return res.status(stockError.response.status || 400).json({
+                    message: "Could not create order due to stock issues",
+                    stockErrors: stockError.response.data
+                });
+            }
+            throw stockError; // Re-throw if it's not a response error
+        }
     } catch (err) {
+        console.error("Error creating order:", err);
         res.status(400).json({ message: "Error creating order", error: err.message });
     }
 });

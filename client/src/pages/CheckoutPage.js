@@ -119,10 +119,27 @@ const CheckoutPage = () => {
         
         // Save to MongoDB only
         try {
+          // First, create the order which will check stock
           const response = await axios.post('http://localhost:3001/api/orders', orderData);
+          
           if (response.status !== 201) {
             throw new Error('Failed to save order to database');
           }
+          
+          // Handle stock issues if any were reported
+          if (response.data.stockErrors) {
+            // Format the error message for out-of-stock items
+            const stockErrors = response.data.stockErrors.errors || [];
+            if (stockErrors.length > 0) {
+              const errorMessages = stockErrors.map(error => 
+                `${error.title || 'Item'}: ${error.error} (Requested: ${error.requested}, Available: ${error.available})`
+              );
+              throw new Error(`Some items are out of stock:\n${errorMessages.join('\n')}`);
+            }
+          }
+          
+          // Order created successfully
+          console.log('Order created:', response.data);
           
           // Clear cart 
           clearCart();
@@ -131,7 +148,26 @@ const CheckoutPage = () => {
           navigate(`/invoice/${orderId}`);
         } catch (error) {
           console.error('Error saving order to database:', error);
-          alert('Failed to process your order. Please try again later.');
+          
+          // Check for stock error message
+          if (error.response && error.response.data && error.response.data.stockErrors) {
+            const stockErrors = error.response.data.stockErrors.errors || [];
+            if (stockErrors.length > 0) {
+              const outOfStockItems = stockErrors
+                .filter(err => err.error === 'Insufficient stock')
+                .map(err => `${err.title}: Only ${err.available} available (you requested ${err.requested})`);
+                
+              if (outOfStockItems.length > 0) {
+                alert(`Some items in your cart are out of stock or have insufficient quantity:\n\n${outOfStockItems.join('\n')}`);
+              } else {
+                alert('Failed to process your order due to stock issues. Please try again later.');
+              }
+            } else {
+              alert('Failed to process your order. Please try again later.');
+            }
+          } else {
+            alert('Failed to process your order. Please try again later.');
+          }
         }
       } catch (error) {
         console.error('Error processing order:', error);
