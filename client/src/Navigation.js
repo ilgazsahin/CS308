@@ -11,6 +11,9 @@ import ProductsPage from "./pages/ProductsPage";
 import AboutPage from "./pages/AboutPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import OrderHistory from "./pages/OrderHistory";
+import InvoicePage from "./pages/InvoicePage";
+import StockManagement from "./pages/StockManagement"; // Import the new StockManagement page
 import { CartProvider } from './components/CartContext';
 
 const Navigation = () => {
@@ -36,9 +39,12 @@ const Navigation = () => {
                     {/* Cart and Checkout Routes */}
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/orders" element={<OrderHistory />} />
+                    <Route path="/invoice/:orderId" element={<InvoicePage />} />
 
-                    {/* Admin Dashboard */}
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<Dashboard />} />
+                    <Route path="/admin/stock" element={<StockManagement />} />
                 </Routes>
             </CartProvider>
         </Router>

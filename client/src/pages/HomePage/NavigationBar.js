@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaShoppingCart } from "react-icons/fa";
+import { FaSearch, FaShoppingCart, FaSpinner } from "react-icons/fa";
 import { useCart } from "../../components/CartContext";
 
 const NavigationBar = () => {
@@ -8,7 +8,7 @@ const NavigationBar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const token = localStorage.getItem("token");
     const userName = localStorage.getItem("userName");
-    const { cartCount, cartTotal } = useCart();
+    const { cartCount, cartTotal, isLoading } = useCart();
 
     const handleToggle = () => {
         setIsOpen((prev) => !prev);
@@ -72,6 +72,18 @@ const NavigationBar = () => {
                                         }}>
                                             <p style={{ margin: 0, fontWeight: "500" }}>Hello, {userName || "User"}</p>
                                             <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            <Link
+                                                to="/orders"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Order History
+                                            </Link>
+                                            <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
                                             <button
                                                 onClick={() => {
                                                     handleLogout();
@@ -132,8 +144,28 @@ const NavigationBar = () => {
                             alignItems: "center",
                             gap: "5px"
                         }}>
-                            <FaShoppingCart />
-                            CART ({cartCount > 0 ? `$${cartTotal.toFixed(2)}` : "0"})
+                            {isLoading ? (
+                                <>
+                                    <FaSpinner className="fa-spin" />
+                                    CART (loading...)
+                                </>
+                            ) : (
+                                <>
+                                    <FaShoppingCart />
+                                    CART ({cartCount > 0 ? `$${cartTotal.toFixed(2)}` : "0"})
+                                </>
+                            )}
+                            <style>
+                                {`
+                                    @keyframes fa-spin {
+                                        0% { transform: rotate(0deg); }
+                                        100% { transform: rotate(360deg); }
+                                    }
+                                    .fa-spin {
+                                        animation: fa-spin 1s infinite linear;
+                                    }
+                                `}
+                            </style>
                         </Link>
                         <Link to="#" style={{ 
                             textDecoration: "none", 

@@ -13,9 +13,11 @@ function Dashboard() {
     description: "",
     publishedYear: "",
     image: "",
-    price: ""
+    price: "",
+    stock: 10 // Default stock value
   });
   const [message, setMessage] = useState("");
+  const [stockUpdateMessage, setStockUpdateMessage] = useState("");
 
   // Fetch existing books on mount
   useEffect(() => {
@@ -43,7 +45,8 @@ function Dashboard() {
     const bookToSend = {
       ...newBook,
       publishedYear: newBook.publishedYear ? Number(newBook.publishedYear) : undefined,
-      price: newBook.price ? Number(newBook.price) : undefined
+      price: newBook.price ? Number(newBook.price) : undefined,
+      stock: newBook.stock ? Number(newBook.stock) : 10
     };
 
     try {
@@ -56,7 +59,8 @@ function Dashboard() {
         description: "",
         publishedYear: "",
         image: "",
-        price: ""
+        price: "",
+        stock: 10
       });
       // Re-fetch books to update the list
       const updatedList = await axios.get("http://localhost:3001/api/books");
@@ -66,10 +70,56 @@ function Dashboard() {
     }
   };
 
+  // Handle stock update
+  const handleStockChange = async (bookId, newStock) => {
+    try {
+      // Ensure stock is a valid number and not negative
+      const stockValue = parseInt(newStock, 10);
+      if (isNaN(stockValue) || stockValue < 0) {
+        setStockUpdateMessage("Stock must be a valid non-negative number");
+        return;
+      }
+
+      // Update the stock via API
+      await axios.patch(`http://localhost:3001/api/books/${bookId}/stock`, {
+        stock: stockValue
+      });
+
+      // Update the local state
+      setBooks(books.map(book => 
+        book._id === bookId ? { ...book, stock: stockValue } : book
+      ));
+
+      setStockUpdateMessage("Stock updated successfully!");
+      
+      // Clear the message after 3 seconds
+      setTimeout(() => setStockUpdateMessage(""), 3000);
+    } catch (error) {
+      setStockUpdateMessage("Error updating stock: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // Format stock status for display
+  const getStockStatusStyle = (stock) => {
+    if (stock === undefined || stock === null) return {};
+    
+    if (stock <= 0) {
+      return { color: "#d32f2f", fontWeight: "bold" }; // Red for out of stock
+    } else if (stock < 5) {
+      return { color: "#f57c00", fontWeight: "bold" }; // Orange for low stock
+    } else {
+      return { color: "#388e3c" }; // Green for in stock
+    }
+  };
+
   return (
       <div style={styles.dashboardContainer}>
         <header style={styles.header}>
           <h1>Admin Dashboard</h1>
+          <div style={styles.headerLinks}>
+            <Link to="/admin/stock" style={styles.headerLink}>Stock Management</Link>
+            <Link to="/home" style={styles.headerLink}>Go to Store</Link>
+          </div>
         </header>
 
         <div style={styles.contentContainer}>
@@ -128,6 +178,15 @@ function Dashboard() {
                   required
                   style={styles.inputField}
               />
+              <input
+                  type="number"
+                  name="stock"
+                  placeholder="Stock Quantity"
+                  value={newBook.stock}
+                  onChange={handleChange}
+                  required
+                  style={styles.inputField}
+              />
               <button type="submit" style={styles.addButton}>
                 Add Book
               </button>
@@ -136,6 +195,7 @@ function Dashboard() {
 
           <div style={styles.bookListSection}>
             <h2>Existing Books</h2>
+            {stockUpdateMessage && <p style={{ color: "green" }}>{stockUpdateMessage}</p>}
             <table style={styles.table}>
               <thead>
               <tr>
@@ -143,6 +203,7 @@ function Dashboard() {
                 <th style={styles.tableHeader}>Author</th>
                 <th style={styles.tableHeader}>Published Year</th>
                 <th style={styles.tableHeader}>Price</th>
+                <th style={styles.tableHeader}>Stock</th>
                 <th style={styles.tableHeader}>Actions</th>
               </tr>
               </thead>
@@ -154,6 +215,21 @@ function Dashboard() {
                     <td style={styles.tableCell}>{book.publishedYear}</td>
                     <td style={styles.tableCell}>
                       {book.price !== undefined ? `$${book.price.toFixed(2)}` : ""}
+                    </td>
+                    <td style={styles.tableCell}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <input
+                          type="number"
+                          min="0"
+                          value={book.stock !== undefined ? book.stock : 0}
+                          onChange={(e) => handleStockChange(book._id, e.target.value)}
+                          style={{ ...styles.stockInput, ...getStockStatusStyle(book.stock) }}
+                        />
+                        <span style={getStockStatusStyle(book.stock)}>
+                          {book.stock <= 0 ? 'Out of stock' : 
+                           book.stock < 5 ? 'Low stock' : 'In stock'}
+                        </span>
+                      </div>
                     </td>
                     <td style={styles.tableCell}>
                       {/* Edit link navigates to an EditBook page */}
@@ -186,6 +262,21 @@ const styles = {
     color: "#fff",
     padding: "1rem",
     textAlign: "center",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerLinks: {
+    display: "flex",
+    gap: "1rem",
+  },
+  headerLink: {
+    color: "#fff",
+    textDecoration: "none",
+    padding: "5px 10px",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: "4px",
+    transition: "background-color 0.3s ease",
   },
   contentContainer: {
     display: "flex",
@@ -214,6 +305,13 @@ const styles = {
     padding: "0.5rem",
     borderRadius: "4px",
     border: "1px solid #ccc",
+  },
+  stockInput: {
+    width: "60px",
+    padding: "0.5rem",
+    borderRadius: "4px",
+    border: "1px solid #ccc",
+    textAlign: "center"
   },
   textArea: {
     height: "80px",

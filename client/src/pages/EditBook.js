@@ -11,7 +11,8 @@ const EditBook = () => {
         description: "",
         publishedYear: "",
         image: "",
-        price: ""
+        price: "",
+        stock: 0
     });
     const [message, setMessage] = useState("");
 
@@ -41,7 +42,8 @@ const EditBook = () => {
         const updatedBook = {
             ...book,
             publishedYear: book.publishedYear ? Number(book.publishedYear) : undefined,
-            price: book.price ? Number(book.price) : undefined
+            price: book.price ? Number(book.price) : undefined,
+            stock: book.stock ? Number(book.stock) : 0
         };
 
         try {
@@ -53,6 +55,19 @@ const EditBook = () => {
             }, 1000);
         } catch (error) {
             setMessage("Error updating book: " + (error.response?.data?.message || error.message));
+        }
+    };
+
+    // Format stock status for display
+    const getStockStatusStyle = (stock) => {
+        if (stock === undefined || stock === null) return {};
+        
+        if (stock <= 0) {
+            return { color: "#d32f2f", fontWeight: "bold" }; // Red for out of stock
+        } else if (stock < 5) {
+            return { color: "#f57c00", fontWeight: "bold" }; // Orange for low stock
+        } else {
+            return { color: "#388e3c" }; // Green for in stock
         }
     };
 
@@ -112,6 +127,24 @@ const EditBook = () => {
                     required
                     style={styles.input}
                 />
+                <div style={styles.stockContainer}>
+                    <label htmlFor="stock" style={styles.stockLabel}>Stock Quantity:</label>
+                    <input
+                        id="stock"
+                        type="number"
+                        name="stock"
+                        min="0"
+                        placeholder="Stock Quantity"
+                        value={book.stock}
+                        onChange={handleChange}
+                        required
+                        style={{...styles.stockInput, ...getStockStatusStyle(book.stock)}}
+                    />
+                    <span style={{...getStockStatusStyle(book.stock), marginLeft: "10px"}}>
+                        {book.stock <= 0 ? 'Out of stock' : 
+                        book.stock < 5 ? 'Low stock' : 'In stock'}
+                    </span>
+                </div>
                 <button type="submit" style={styles.button}>
                     Save Changes
                 </button>
@@ -150,6 +183,23 @@ const styles = {
         borderRadius: "4px",
         border: "1px solid #ccc",
     },
+    stockContainer: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "0.5rem 0",
+    },
+    stockLabel: {
+        minWidth: "120px",
+        fontWeight: "bold",
+    },
+    stockInput: {
+        width: "80px",
+        padding: "0.5rem",
+        borderRadius: "4px",
+        border: "1px solid #ccc",
+        textAlign: "center",
+    },
     button: {
         backgroundColor: "#007bff",
         color: "#fff",
@@ -157,6 +207,7 @@ const styles = {
         padding: "0.75rem",
         borderRadius: "4px",
         cursor: "pointer",
+        marginTop: "10px",
     },
 };
 

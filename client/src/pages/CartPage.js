@@ -10,22 +10,73 @@ const CartPage = () => {
   const navigate = useNavigate();
   
   // Check if user is logged in
-  const isLoggedIn = localStorage.getItem('token') ? true : false;
+  const isLoggedIn = localStorage.getItem('token') !== null;
   
-  const handleQuantityChange = (productId, newQuantity) => {
-    if (newQuantity >= 1) {
-      updateQuantity(productId, parseInt(newQuantity));
-    }
+  const handleQuantityChange = async (productId, newQuantity) => {
+    // Convert to numeric value if it's a string
+    const qty = parseInt(newQuantity, 10);
+    if (isNaN(qty)) return;
+    
+    // If quantity is valid, attempt to update
+    const success = await updateQuantity(productId, qty);
+    
+    // If update failed (due to stock limits), we don't need to do anything
+    // The CartContext already showed an alert
   };
   
   const handleCheckout = () => {
     if (!isLoggedIn) {
-      setCheckoutError('Please login or register to complete your purchase.');
-      return;
+      // Save the current page as the redirect target
+      sessionStorage.setItem('redirectAfterLogin', '/checkout');
+      
+      // Show user authentication message
+      setCheckoutError("Please login or register to complete your purchase");
+    } else {
+      // User is logged in, proceed to checkout
+      navigate('/checkout');
+    }
+  };
+  
+  // Helper function to display stock status for an item
+  const getStockStatus = (item) => {
+    if (item.stock === undefined) return null;
+    
+    if (item.stock <= 0) {
+      return (
+        <div style={{
+          color: "#d32f2f",
+          fontSize: "0.85rem",
+          marginTop: "5px",
+          fontWeight: "500"
+        }}>
+          Out of Stock
+        </div>
+      );
+    } else if (item.stock < 5) {
+      return (
+        <div style={{
+          color: "#f57c00",
+          fontSize: "0.85rem",
+          marginTop: "5px",
+          fontWeight: "500"
+        }}>
+          Low Stock: Only {item.stock} left
+        </div>
+      );
+    } else if (item.quantity > item.stock) {
+      return (
+        <div style={{
+          color: "#d32f2f",
+          fontSize: "0.85rem",
+          marginTop: "5px",
+          fontWeight: "500"
+        }}>
+          Warning: Only {item.stock} available
+        </div>
+      );
     }
     
-    // Proceed to checkout if logged in
-    navigate('/checkout');
+    return null;
   };
   
   return (
@@ -152,6 +203,7 @@ const CartPage = () => {
                             fontSize: "0.85rem",
                             color: "var(--light-text)"
                           }}>{item.author}</p>
+                          {getStockStatus(item)}
                         </div>
                       </td>
                       <td style={{ padding: "20px 15px" }}>
@@ -193,7 +245,9 @@ const CartPage = () => {
                               height: "30px",
                               border: "1px solid var(--border-color)",
                               background: "transparent",
-                              cursor: "pointer"
+                              cursor: "pointer",
+                              opacity: item.stock !== undefined && item.quantity >= item.stock ? 0.5 : 1,
+                              pointerEvents: item.stock !== undefined && item.quantity >= item.stock ? "none" : "auto"
                             }}
                           >+</button>
                         </div>
@@ -271,6 +325,23 @@ const CartPage = () => {
                   <span>${cartTotal.toFixed(2)}</span>
                 </div>
                 
+                {/* Stock warnings for checkout */}
+                {cartItems.some(item => 
+                  item.stock !== undefined && (item.stock <= 0 || item.quantity > item.stock)
+                ) && (
+                  <div style={{ 
+                    color: "#721c24", 
+                    backgroundColor: "#f8d7da", 
+                    padding: "12px 15px", 
+                    borderRadius: "4px", 
+                    marginTop: "20px",
+                    marginBottom: "20px",
+                    fontSize: "0.9rem"
+                  }}>
+                    Some items in your cart have stock issues. Please update quantities before checkout.
+                  </div>
+                )}
+                
                 {checkoutError && (
                   <div style={{ 
                     color: "#721c24", 
@@ -311,15 +382,22 @@ const CartPage = () => {
                 
                 <button 
                   onClick={handleCheckout}
+                  disabled={cartItems.some(item => 
+                    item.stock !== undefined && (item.stock <= 0 || item.quantity > item.stock)
+                  )}
                   style={{ 
                     width: "100%", 
                     padding: "15px", 
-                    backgroundColor: "var(--primary-color)", 
+                    backgroundColor: cartItems.some(item => 
+                      item.stock !== undefined && (item.stock <= 0 || item.quantity > item.stock)
+                    ) ? "#cccccc" : "var(--primary-color)", 
                     color: "white", 
                     border: "none",
                     marginTop: "20px",
                     fontWeight: "500",
-                    cursor: "pointer",
+                    cursor: cartItems.some(item => 
+                      item.stock !== undefined && (item.stock <= 0 || item.quantity > item.stock)
+                    ) ? "not-allowed" : "pointer",
                     fontSize: "0.95rem"
                   }}
                 >
