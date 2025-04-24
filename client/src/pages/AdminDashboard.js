@@ -118,6 +118,7 @@ function Dashboard() {
           <h1>Admin Dashboard</h1>
           <div style={styles.headerLinks}>
             <Link to="/admin/stock" style={styles.headerLink}>Stock Management</Link>
+            <Link to="/admin/manage-orders" style={styles.headerLink}>Manage Orders</Link>
             <Link to="/home" style={styles.headerLink}>Go to Store</Link>
           </div>
         </header>
