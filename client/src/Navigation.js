@@ -15,6 +15,7 @@ import OrderHistory from "./pages/OrderHistory";
 import InvoicePage from "./pages/InvoicePage";
 import StockManagement from "./pages/StockManagement"; // Import the new StockManagement page
 import { CartProvider } from './components/CartContext';
+import ManageOrders from './pages/ManageOrders';
 
 const Navigation = () => {
     return (
@@ -45,6 +46,7 @@ const Navigation = () => {
                     {/* Admin Routes */}
                     <Route path="/admin" element={<Dashboard />} />
                     <Route path="/admin/stock" element={<StockManagement />} />
+                    <Route path="/admin/manage-orders" element={<ManageOrders />} />
                 </Routes>
             </CartProvider>
         </Router>
