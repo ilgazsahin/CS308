@@ -4,6 +4,19 @@ const OrderModel = require("../Models/OrderModel");
 const BookModel = require("../Models/BookModel"); 
 const axios = require("axios");
 
+// Get all orders (for admin) - Moving this route to the top
+router.get("/", async (req, res) => {
+    try {
+        const orders = await OrderModel.find({})
+            .sort({ orderDate: -1 }); // Sort by date, newest first
+        
+        res.json(orders);
+    } catch (err) {
+        console.error("Error retrieving all orders:", err);
+        res.status(500).json({ message: "Error retrieving orders", error: err.message });
+    }
+});
+
 // Create a new order
 router.post("/", async (req, res) => {
     try {
@@ -45,10 +58,20 @@ router.post("/", async (req, res) => {
 //Get all orders for a user
 router.get("/user/:userId", async (req, res) => {
     try {
-        const orders = await OrderModel.find({ userId: req.params.userId })
-            .sort({ orderDate: -1 }); // Sort by date, newest first
+        const orders = await OrderModel.find({ 
+            userId: req.params.userId 
+        })
+        .sort({ orderDate: -1 }); // Sort by date, newest first
+        
+        console.log('Found orders:', orders); // Add this for debugging
+        
+        if (!orders) {
+            return res.status(404).json({ message: "No orders found" });
+        }
+        
         res.json(orders);
     } catch (err) {
+        console.error("Error retrieving orders:", err);
         res.status(500).json({ message: "Error retrieving orders", error: err.message });
     }
 });
@@ -85,13 +108,9 @@ router.get("/check-purchase", async (req, res) => {
 // Get a specific order by orderId
 router.get("/:orderId", async (req, res) => {
     try {
-        const { orderId } = req.params;
-
-        if (!orderId) {
-            return res.status(400).json({ message: "Order ID is required" });
-        }
-
-        const order = await OrderModel.findOne({ orderId: parseInt(orderId) });
+        const order = await OrderModel.findOne({ 
+            orderId: req.params.orderId 
+        });
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
@@ -105,31 +124,36 @@ router.get("/:orderId", async (req, res) => {
 });
 
 // PATCH: Update order status (for admin panel)
-router.patch("/:orderId/status", async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const { status } = req.body;
+// PATCH  /api/orders/:orderId/status
+// Controller/OrderController.js  (only the patch route needs changing)
 
-        const validStatuses = ["processing", "in-transit", "delivered"];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json({ message: "Invalid status value" });
-        }
+// PATCH  /api/orders/:orderId/status
 
-        const updatedOrder = await OrderModel.findOneAndUpdate(
-            { orderId: parseInt(orderId) },
-            { status },
-            { new: true }
-        );
-
-        if (!updatedOrder) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-
-        res.json({ message: "Order status updated", order: updatedOrder });
-    } catch (err) {
-        console.error("Error updating order status:", err);
-        res.status(500).json({ message: "Error updating order status", error: err.message });
-    }
-});
-
-module.exports = router;
+ router.patch("/:orderId/status", async (req, res) => {
+     try {
+         const { orderId } = req.params;
+         const { status } = req.body;
+ 
+         const validStatuses = ["processing", "in-transit", "delivered"];
+         if (!validStatuses.includes(status)) {
+             return res.status(400).json({ message: "Invalid status value" });
+         }
+ 
+         const updatedOrder = await OrderModel.findOneAndUpdate(
+             { orderId: parseInt(orderId) },
+             { status },
+             { new: true }
+         );
+ 
+         if (!updatedOrder) {
+             return res.status(404).json({ message: "Order not found" });
+         }
+ 
+         res.json({ message: "Order status updated", order: updatedOrder });
+     } catch (err) {
+         console.error("Error updating order status:", err);
+         res.status(500).json({ message: "Error updating order status", error: err.message });
+     }
+ });
+ 
+ module.exports = router;

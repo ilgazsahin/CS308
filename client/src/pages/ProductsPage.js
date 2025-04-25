@@ -43,17 +43,8 @@ const ProductsPage = () => {
             // Fetch ratings for each book
             for (const book of bookList) {
                 try {
-                    const response = await axios.get(`http://localhost:3001/api/comments/${book._id}`);
-                    const comments = response.data;
-
-                    // Calculate average rating
-                    if (comments.length > 0) {
-                        const totalRating = comments.reduce((sum, comment) => sum + (comment.rating || 0), 0);
-                        const averageRating = totalRating / comments.length;
-                        ratingsObj[book._id] = averageRating;
-                    } else {
-                        ratingsObj[book._id] = 0; // No ratings yet
-                    }
+                    const response = await axios.get(`http://localhost:3001/api/ratings/book/${book._id}`);
+                    ratingsObj[book._id] = response.data.averageRating;
                 } catch (err) {
                     console.error(`Error fetching ratings for book ${book._id}:`, err);
                     ratingsObj[book._id] = 0;

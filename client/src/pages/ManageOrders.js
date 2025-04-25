@@ -1,63 +1,149 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+// Allowed status transitions
+const STATUS_OPTIONS = ["processing", "in-transit", "delivered"];
+
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
+  /**
+   * Fetch all orders from the backend (admin‑only endpoint)
+   */
   const fetchOrders = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/orders'); // tüm siparişleri al
-      setOrders(response.data);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
+      setLoading(true);
+      const { data } = await axios.get("http://localhost:3001/api/orders");
+      setOrders(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error retrieving orders:", err);
+      setError("Failed to retrieve orders. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  /**
+   * Handle dropdown change ➜ send PATCH /:orderId/status
+   */
   const handleStatusChange = async (orderId, newStatus) => {
+    // optimistic UI update
+    setOrders(prev =>
+      prev.map(o => (o.orderId === orderId ? { ...o, status: newStatus } : o))
+    );
+
     try {
-      await axios.patch(`http://localhost:3001/api/orders/${orderId}/status`, { status: newStatus });
-      fetchOrders(); // yeniden yükle
-    } catch (error) {
-      console.error("Error updating status:", error);
+      await axios.patch(
+        `http://localhost:3001/api/orders/${orderId}/status`,
+        { status: newStatus }
+      );
+    } catch (err) {
+      console.error("Error updating status:", err);
+      setError("Failed to update order status. Reverting …");
+      // rollback
+      fetchOrders();
     }
   };
+
+  const formatDate = dateString =>
+    new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+
+  if (loading) {
+    return (
+      <div style={{ padding: 20, textAlign: "center" }}>Loading orders …</div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: 20, color: "red", textAlign: "center" }}>
+        {error}
+        <button
+          style={{ marginLeft: 16 }}
+          onClick={() => {
+            setError(null);
+            fetchOrders();
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Manage Orders</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>User</th>
-            <th>Status</th>
-            <th>Change</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map(order => (
-            <tr key={order.orderId}>
-              <td>{order.orderId}</td>
-              <td>{order.userId}</td>
-              <td>{order.status}</td>
-              <td>
-                {order.status === "processing" && (
-                  <button onClick={() => handleStatusChange(order.orderId, "in-transit")}>Mark as In-Transit</button>
-                )}
-                {order.status === "in-transit" && (
-                  <button onClick={() => handleStatusChange(order.orderId, "delivered")}>Mark as Delivered</button>
-                )}
-              </td>
+    <div style={{ padding: 20 }}>
+      <h2 style={{ marginBottom: 20 }}>Manage Orders</h2>
+
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#f5f5f5" }}>
+              <th style={th}>Order ID</th>
+              <th style={th}>Date</th>
+              <th style={th}>User</th>
+              <th style={th}>Items</th>
+              <th style={th}>Total</th>
+              <th style={th}>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {orders.map(order => (
+              <tr key={order.orderId} style={{ borderBottom: "1px solid #ddd" }}>
+                <td style={td}>{order.orderId}</td>
+                <td style={td}>{formatDate(order.orderDate)}</td>
+                <td style={td}>{order.userId}</td>
+                <td style={td}>{order.items?.length || 0} items</td>
+                <td style={td}>${order.total}</td>
+                <td style={td}>
+                  <select
+                    value={order.status}
+                    onChange={e => handleStatusChange(order.orderId, e.target.value)}
+                    style={selectStyle}
+                  >
+                    {STATUS_OPTIONS.map(s => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+};
+
+const th = {
+  padding: 12,
+  textAlign: "left",
+  borderBottom: "2px solid #ddd"
+};
+
+const td = {
+  padding: 12
+};
+
+const selectStyle = {
+  padding: "6px 8px",
+  borderRadius: 4,
+  border: "1px solid #ccc",
+  background: "#fff",
+  cursor: "pointer"
 };
 
 export default ManageOrders;

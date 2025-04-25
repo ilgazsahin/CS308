@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
@@ -7,21 +7,30 @@ import { useCart } from "../components/CartContext";
 
 const BookDetail = () => {
     const { id } = useParams();
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const orderId = searchParams.get('orderId');
     const navigate = useNavigate();
     const { addToCart } = useCart();
 
     // Book info
     const [book, setBook] = useState(null);
     // Comments list
-    const [comments, setComments] = useState([]);
+    const [reviews, setReviews] = useState([]);
     // New comment form fields
-    const [text, setText] = useState("");
-    const [rating, setRating] = useState(0);
+    const [commentText, setCommentText] = useState("");
     // Button state
     const [showCheck, setShowCheck] = useState(false);
     // Purchase verification
     const [hasPurchased, setHasPurchased] = useState(false);
     const [isCheckingPurchase, setIsCheckingPurchase] = useState(true);
+    // Add these state variables at the top with other state declarations
+    const [userRating, setUserRating] = useState(0);
+    const [averageRating, setAverageRating] = useState(0);
+    const [totalRatings, setTotalRatings] = useState(0);
+    const [newRating, setNewRating] = useState(0);
+    const [hasExistingComment, setHasExistingComment] = useState(false);
+    const [hasExistingRating, setHasExistingRating] = useState(false);
 
     // Fetch the book details on mount/update
     useEffect(() => {
@@ -36,19 +45,27 @@ const BookDetail = () => {
         fetchBookDetail();
     }, [id]);
 
-    // Fetch comments for this book
+    // Define fetchReviews function
+    const fetchReviews = async () => {
+        try {
+            const [ratingsResponse, commentsResponse] = await Promise.all([
+                axios.get(`http://localhost:3001/api/ratings/book/${id}`),
+                axios.get(`http://localhost:3001/api/comments/${id}`)
+            ]);
+
+            setAverageRating(ratingsResponse.data.averageRating);
+            setTotalRatings(ratingsResponse.data.totalRatings);
+            setReviews(commentsResponse.data.reviews);
+        } catch (error) {
+            console.error("Error fetching reviews:", error);
+        }
+    };
+
+    // Use fetchReviews in useEffect
     useEffect(() => {
-        const fetchComments = async () => {
-            try {
-                const res = await axios.get(`http://localhost:3001/api/comments/${id}`);
-                setComments(res.data);
-            } catch (error) {
-                console.error("Error fetching comments:", error);
-            }
-        };
-        fetchComments();
+        fetchReviews();
     }, [id]);
-    
+
     // Check if user has purchased this book
     useEffect(() => {
         const checkPurchaseStatus = async () => {
@@ -114,6 +131,61 @@ const BookDetail = () => {
         checkPurchaseStatus();
     }, [id]);
 
+    // Add this useEffect to fetch ratings
+    useEffect(() => {
+        const fetchRatings = async () => {
+            try {
+                // Get average rating for the book
+                const ratingRes = await axios.get(`http://localhost:3001/api/ratings/book/${id}`);
+                setAverageRating(ratingRes.data.averageRating);
+                setTotalRatings(ratingRes.data.totalRatings);
+            } catch (error) {
+                console.error("Error fetching ratings:", error);
+            }
+        };
+        fetchRatings();
+    }, [id]);
+
+    useEffect(() => {
+        setNewRating(0);
+        const fetchOrderReview = async () => {
+            if (!orderId) return;
+            
+            const userId = localStorage.getItem("userId");
+            if (!userId) return;
+
+            try {
+                // Fetch rating for this specific order
+                const ratingResponse = await axios.get(
+                    `http://localhost:3001/api/ratings/book/${id}/order/${orderId}`
+                );
+                if (ratingResponse.data) {
+                    setHasExistingRating(true);                // ← Rating already stored
+                    setNewRating(0); 
+                }
+
+                // Fetch comment for this specific order
+                const commentResponse = await axios.get(
+                    `http://localhost:3001/api/comments/book/${id}/order/${orderId}`
+                );
+                if (commentResponse.data) {
+                    setCommentText(commentResponse.data.text || '');
+                }
+            } catch (error) {
+                console.error("Error fetching order review:", error);
+            }
+        };
+
+        fetchOrderReview();
+    }, [id, orderId]);
+
+    
+
+    useEffect(() => {
+        setNewRating(0);
+    }, [orderId]);   // triggers when they pick another order for the same book
+    
+
     if (!book) return (
         <div>
             <NavigationBar />
@@ -123,41 +195,80 @@ const BookDetail = () => {
         </div>
     );
 
-    const handleCommentSubmit = async (e) => {
+    // Update the handleReviewSubmit function
+    const handleReviewSubmit = async (e) => {
         e.preventDefault();
-
-        // Get userId from localStorage
         const userId = localStorage.getItem("userId");
-        if (!userId) {
-            alert("You must be logged in first!");
-            return;
-        }
+        const orderId = searchParams.get('orderId');
         
-        // Check if user has purchased the book
-        if (!hasPurchased) {
-            alert("You can only review books you have purchased.");
+        if (!userId || !orderId) {
+            alert("You must be logged in and access this page from your order history.");
             return;
         }
-
-        // Ensure rating is sent as a number
-        const numericRating = parseInt(rating, 10);
 
         try {
-            await axios.post(`http://localhost:3001/api/comments/${id}`, {
-                userId,
-                text,
-                rating: numericRating,  // Ensure it's a number
-            });
+            // Verify order status first
+            const orderResponse = await axios.get(`http://localhost:3001/api/orders/${orderId}`);
+            if (orderResponse.data.status.toLowerCase() !== "delivered") {
+                alert("You can only review items from delivered orders.");
+                return;
+            }
 
-            setText("");
-            setRating(0);
+            // Submit rating if provided and no existing rating
+            if (newRating > 0 && !hasExistingRating) {
+                try {
+                    const ratingData = {
+                        userId,
+                        rating: newRating,
+                        orderId
+                    };
+                    
+                    await axios.post(`http://localhost:3001/api/ratings/${id}`, ratingData);
+                    setNewRating(0);  
+                    setHasExistingRating(false);
+                } catch (error) {
+                    if (error.response?.data?.message) {
+                        alert(error.response.data.message);
+                        return;
+                    }
+                    throw error;
+                }
+            }
 
-            // Refresh comments after adding a new one
-            const res = await axios.get(`http://localhost:3001/api/comments/${id}`);
-            setComments(res.data);
+            // Submit comment if provided and no existing comment
+            if (commentText.trim() && !hasExistingComment) {
+                try {
+                    const commentData = {
+                        userId,
+                        text: commentText.trim(),
+                        orderId
+                    };
+                    
+                    await axios.post(`http://localhost:3001/api/comments/${id}`, commentData);
+                    setHasExistingComment(true);
+                } catch (error) {
+                    if (error.response?.data?.message) {
+                        alert(error.response.data.message);
+                        return;
+                    }
+                    throw error;
+                }
+            }
+
+            // Clear form
+            setCommentText("");
+            setNewRating(0);
+            
+            // Refresh reviews
+            const response = await axios.get(`http://localhost:3001/api/comments/${id}`);
+            setReviews(response.data.reviews);
+            setAverageRating(response.data.averageRating);
+            setTotalRatings(response.data.totalRatings);
+            
+            alert("Thank you for your review! If you added a comment, it will be visible after approval.");
         } catch (error) {
-            console.error("Error adding comment:", error);
-            alert("Failed to submit comment. Please try again.");
+            console.error("Error submitting review:", error);
+            alert("Failed to submit review. Please try again.");
         }
     };
 
@@ -228,6 +339,9 @@ const BookDetail = () => {
             );
         }
     };
+
+    // Only show the review form if there's an orderId in the URL
+    const showReviewForm = !!searchParams.get('orderId');
 
     return (
         <div style={{backgroundColor: "var(--light-bg)", minHeight: "100vh"}}>
@@ -380,103 +494,59 @@ const BookDetail = () => {
                     </div>
                 </div>
 
-                {/* Comments Section */}
-                <div style={{backgroundColor: "white", padding: "40px"}}>
+                {/* Book Rating Summary */}
+                <div style={{
+                    backgroundColor: "white",
+                    padding: "40px",
+                    marginBottom: "30px"
+                }}>
                     <h2 style={{
                         fontFamily: "'Playfair Display', serif",
                         fontSize: "1.8rem",
-                        marginBottom: "30px",
+                        marginBottom: "20px",
                         color: "var(--primary-color)"
-                    }}>Reviews ({comments.length})</h2>
-
-                    {comments.length > 0 ? (
-                        <div style={{marginBottom: "50px"}}>
-                            {comments.map((c) => (
-                                <div key={c._id} style={{
-                                    borderBottom: "1px solid var(--border-color)",
-                                    paddingBottom: "20px",
-                                    marginBottom: "20px"
-                                }}>
-                                    <div style={{display: "flex", justifyContent: "space-between", marginBottom: "10px"}}>
-                                        <p style={{fontWeight: "500", color: "var(--primary-color)"}}>
-                                            {c.user ? c.user.name || c.user.email : "Anonymous"}
-                                        </p>
-                                        <p style={{color: "var(--light-text)", fontSize: "0.9rem"}}>
-                                            {new Date(c.createdAt).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    
-                                    <div style={{display: "flex", marginBottom: "10px"}}>
-                                        {[1, 2, 3, 4, 5].map((star) => (
-                                            <span key={star} style={{
-                                                color: star <= c.rating ? "var(--accent-color)" : "#ddd",
-                                                marginRight: "5px",
-                                                fontSize: "1.2rem"
-                                            }}>★</span>
-                                        ))}
-                                    </div>
-                                    
-                                    <p style={{lineHeight: "1.6", color: "var(--text-color)"}}>{c.text}</p>
+                    }}>Ratings & Reviews</h2>
+                    
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: "30px"
+                    }}>
+                        {/* Average Rating Display */}
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            marginRight: "30px"
+                        }}>
+                            <span style={{
+                                fontSize: "3rem",
+                                fontWeight: "bold",
+                                color: "var(--primary-color)",
+                                marginRight: "15px"
+                            }}>
+                                {averageRating.toFixed(1)}
+                            </span>
+                            <div>
+                                <div style={{display: "flex", marginBottom: "5px"}}>
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <span key={star} style={{
+                                            color: star <= Math.round(averageRating) ? "var(--accent-color)" : "#ddd",
+                                            fontSize: "1.2rem",
+                                            marginRight: "2px"
+                                        }}>★</span>
+                                    ))}
                                 </div>
-                            ))}
+                                <span style={{color: "var(--light-text)", fontSize: "0.9rem"}}>
+                                    {totalRatings} {totalRatings === 1 ? 'rating' : 'ratings'}
+                                </span>
+                            </div>
                         </div>
-                    ) : (
-                        <p style={{marginBottom: "40px", color: "var(--light-text)"}}>No reviews yet. Be the first to review this book!</p>
-                    )}
+                    </div>
 
-                    {/* Add Review Form */}
-                    <div>
-                        <h3 style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "1.4rem",
-                            marginBottom: "20px",
-                            color: "var(--primary-color)"
-                        }}>Add a Review</h3>
-                        
-                        {isCheckingPurchase ? (
-                            <p style={{marginBottom: "20px", color: "var(--light-text)"}}>
-                                Checking purchase status...
-                            </p>
-                        ) : !localStorage.getItem("userId") ? (
-                            <div style={{
-                                backgroundColor: "#f8f8f8",
-                                padding: "20px",
-                                marginBottom: "30px",
-                                borderRadius: "4px"
-                            }}>
-                                <p style={{marginBottom: "15px", color: "var(--primary-color)"}}>
-                                    Please <Link to="/login" style={{color: "var(--accent-color)", textDecoration: "none", fontWeight: "500"}}>login</Link> to leave a review.
-                                </p>
-                            </div>
-                        ) : !hasPurchased ? (
-                            <div style={{
-                                backgroundColor: "#f8f8f8",
-                                padding: "20px",
-                                marginBottom: "30px",
-                                borderRadius: "4px"
-                            }}>
-                                <p style={{marginBottom: "15px", color: "var(--primary-color)"}}>
-                                    You can only review books you have purchased.
-                                </p>
-                                <button 
-                                    onClick={handleAddToCart}
-                                    disabled={!book.stock || book.stock <= 0}
-                                    style={{
-                                        padding: "10px 20px",
-                                        backgroundColor: !book.stock || book.stock <= 0 ? "#cccccc" : "var(--primary-color)",
-                                        color: "white",
-                                        border: "none",
-                                        cursor: !book.stock || book.stock <= 0 ? "not-allowed" : "pointer",
-                                        fontWeight: "500",
-                                        fontSize: "0.9rem",
-                                        borderRadius: "4px"
-                                    }}
-                                >
-                                    {!book.stock || book.stock <= 0 ? "OUT OF STOCK" : "ADD TO CART"}
-                                </button>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleCommentSubmit}>
+                    {/* Review Form */}
+                    {showReviewForm && (
+                        <form onSubmit={handleReviewSubmit}>
+                            {showReviewForm && (
                                 <div style={{marginBottom: "20px"}}>
                                     <label style={{
                                         display: "block", 
@@ -491,9 +561,9 @@ const BookDetail = () => {
                                             <button 
                                                 type="button"
                                                 key={star} 
-                                                onClick={() => setRating(star)}
+                                                onClick={() => setNewRating(star)}
                                                 style={{
-                                                    color: star <= rating ? "var(--accent-color)" : "#ddd",
+                                                    color: star <= newRating ? "var(--accent-color)" : "#ddd",
                                                     marginRight: "5px",
                                                     fontSize: "1.5rem",
                                                     background: "none",
@@ -506,7 +576,9 @@ const BookDetail = () => {
                                         ))}
                                     </div>
                                 </div>
-                                
+                            )}
+                            
+                            {!hasExistingComment && (
                                 <div style={{marginBottom: "20px"}}>
                                     <label style={{
                                         display: "block", 
@@ -517,9 +589,8 @@ const BookDetail = () => {
                                         Your Review
                                     </label>
                                     <textarea
-                                        value={text}
-                                        onChange={(e) => setText(e.target.value)}
-                                        required
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
                                         style={{
                                             width: "100%",
                                             padding: "15px",
@@ -530,25 +601,75 @@ const BookDetail = () => {
                                         }}
                                     />
                                 </div>
-                                
+                            )}
+
+                            {(!hasExistingComment || !hasExistingRating) && (
                                 <button 
-                                    type="submit" 
-                                    className="btn btn-primary"
+                                    type="submit"
                                     style={{
-                                        padding: "12px 25px",
                                         backgroundColor: "var(--primary-color)",
                                         color: "white",
+                                        padding: "12px 25px",
                                         border: "none",
+                                        borderRadius: "4px",
                                         cursor: "pointer",
-                                        fontWeight: "500",
-                                        fontSize: "0.9rem"
+                                        fontWeight: "500"
                                     }}
                                 >
-                                    SUBMIT REVIEW
+                                    Submit Review
                                 </button>
-                            </form>
-                        )}
-                    </div>
+                            )}
+                        </form>
+                    )}
+                </div>
+
+                {/* Reviews List */}
+                <div style={{backgroundColor: "white", padding: "40px"}}>
+                    <h2 style={{
+                        fontFamily: "'Playfair Display', serif",
+                        fontSize: "1.8rem",
+                        marginBottom: "30px",
+                        color: "var(--primary-color)"
+                    }}>Reviews ({reviews.length})</h2>
+
+                    {reviews.length > 0 ? (
+                        <div style={{marginBottom: "50px"}}>
+                            {reviews.map((review) => (
+                                <div key={review._id} style={{
+                                    borderBottom: "1px solid var(--border-color)",
+                                    paddingBottom: "20px",
+                                    marginBottom: "20px"
+                                }}>
+                                    <div style={{display: "flex", justifyContent: "space-between", marginBottom: "10px"}}>
+                                        <p style={{fontWeight: "500", color: "var(--primary-color)"}}>
+                                            {review.user.name || review.user.email}
+                                        </p>
+                                        <p style={{color: "var(--light-text)", fontSize: "0.9rem"}}>
+                                            {new Date(review.createdAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    
+                                    {review.rating && (
+                                        <div style={{display: "flex", marginBottom: "10px"}}>
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <span key={star} style={{
+                                                    color: star <= review.rating ? "var(--accent-color)" : "#ddd",
+                                                    marginRight: "5px",
+                                                    fontSize: "1.2rem"
+                                                }}>★</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {review.text && (
+                                        <p style={{lineHeight: "1.6", color: "var(--text-color)"}}>{review.text}</p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p>No reviews yet. Be the first to review this book!</p>
+                    )}
                 </div>
             </div>
             

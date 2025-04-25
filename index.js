@@ -8,6 +8,8 @@ const jwt = require("jsonwebtoken");
 const UserController = require("./Controller/UserController");
 const BookController = require("./Controller/BookController");
 const CommentController = require("./Controller/CommentController");
+const OrderController = require("./Controller/OrderController");
+const RatingController = require("./Controller/RatingController");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,7 +20,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb://localhost:27017/MyLocalBookstore", {
+mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -49,6 +51,18 @@ mongoose.connection.once('open', async () => {
     console.log('Created "comments" collection.');
   }
 
+  // If you add a separate "ratings" collection later
+  if (!collectionNames.includes('ratings')) {
+    await db.createCollection('ratings');
+    console.log('Created "ratings" collection.');
+  }
+
+  // For OrderModel (named "orders")
+  if (!collectionNames.includes('orders')) {
+    await db.createCollection('orders');
+    console.log('Created "orders" collection.');
+  }
+
   console.log('All necessary collections checked and created if missing.');
 });
 
@@ -57,6 +71,8 @@ mongoose.connection.once('open', async () => {
 app.use("/api/users", UserController);
 app.use("/api/books", BookController);
 app.use("/api/comments", CommentController);
+app.use("/api/orders", OrderController);
+app.use("/api/ratings", RatingController);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

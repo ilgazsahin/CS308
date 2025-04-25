@@ -1,7 +1,6 @@
-// Models/CommentModel.js
 const mongoose = require('mongoose');
 
-const CommentSchema = new mongoose.Schema({
+const RatingSchema = new mongoose.Schema({
   book: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Book',
@@ -16,13 +15,11 @@ const CommentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  text: {
-    type: String,
-    required: true
-  },
-  status: {
-    type: Boolean,
-    default: false  // Comments are hidden by default until manually approved
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
   },
   createdAt: {
     type: Date,
@@ -31,9 +28,8 @@ const CommentSchema = new mongoose.Schema({
 });
 
 // Remove any compound indexes that might create uniqueness constraints
-mongoose.model('comments', CommentSchema).collection.dropIndexes().catch(err => {
+mongoose.model('ratings', RatingSchema).collection.dropIndexes().catch(err => {
     console.log('Error dropping indexes:', err);
 });
 
-module.exports = mongoose.model('comments', CommentSchema);
-// This will create/connect to a "comments" collection
+module.exports = mongoose.model('ratings', RatingSchema); 

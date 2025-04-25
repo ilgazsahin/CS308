@@ -7,39 +7,52 @@ import axios from 'axios';
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
-    
-    if (!token || !userId) {
-      navigate('/login');
-      return;
-    }
+    const fetchOrders = async () => {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      
+      if (!token || !userId) {
+        navigate('/login');
+        return;
+      }
 
-    // Fetch orders from MongoDB
-    const fetchOrdersFromMongoDB = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+        
+        console.log('Fetching orders for userId:', userId); // Debug log
+        
         const response = await axios.get(`http://localhost:3001/api/orders/user/${userId}`);
-        setOrders(response.data);
+        console.log('Orders response:', response.data); // Debug log
+        
+        if (response.data && Array.isArray(response.data)) {
+          setOrders(response.data);
+        } else {
+          console.error('Unexpected response format:', response.data);
+          setError('Received invalid data format from server');
+        }
       } catch (error) {
-        console.error('Error fetching orders from MongoDB:', error);
-        setOrders([]);
+        console.error('Error fetching orders:', error);
+        setError(error.message || 'Failed to fetch orders');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchOrdersFromMongoDB();
+    fetchOrders();
   }, [navigate]);
 
-  // Format date to a more readable format
+  // Helper function to format date
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -59,6 +72,30 @@ const OrderHistory = () => {
         {isLoading ? (
           <div style={{ textAlign: "center", padding: "40px" }}>
             <p>Loading your orders...</p>
+          </div>
+        ) : error ? (
+          <div style={{ 
+            backgroundColor: "#fff3f3", 
+            padding: "20px", 
+            borderRadius: "4px",
+            marginBottom: "20px",
+            color: "#d32f2f"
+          }}>
+            <p>Error: {error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{
+                marginTop: "10px",
+                padding: "8px 16px",
+                border: "none",
+                borderRadius: "4px",
+                backgroundColor: "#d32f2f",
+                color: "white",
+                cursor: "pointer"
+              }}
+            >
+              Try Again
+            </button>
           </div>
         ) : orders.length === 0 ? (
           <div style={{
@@ -87,7 +124,7 @@ const OrderHistory = () => {
           <div>
             {orders.map((order) => (
               <div 
-                key={order.orderId} 
+                key={order.orderId || order._id} 
                 style={{
                   backgroundColor: "white",
                   padding: "30px",
@@ -110,15 +147,15 @@ const OrderHistory = () => {
                       marginBottom: "5px",
                       fontWeight: "500"
                     }}>
-                      Order #{order.orderId}
+                      Order #{order.orderId || order._id}
                     </h2>
                     <p style={{ color: "var(--light-text)", fontSize: "0.9rem" }}>
-                      Placed on {formatDate(order.orderDate)}
+                      Placed on {formatDate(order.orderDate || order.createdAt)}
                     </p>
                   </div>
                   <div style={{ 
-                    backgroundColor: order.status === 'Paid' ? "#f0f7ed" : "#f8f8f8",
-                    color: order.status === 'Paid' ? "#4b6043" : "var(--light-text)",
+                    backgroundColor: order.status.toLowerCase() === "delivered" ? "#f0f7ed" : "#f8f8f8",
+                    color: order.status.toLowerCase() === "delivered" ? "#4b6043" : "var(--light-text)",
                     padding: "8px 15px",
                     borderRadius: "4px",
                     fontSize: "0.9rem",
@@ -128,140 +165,95 @@ const OrderHistory = () => {
                     {order.status}
                   </div>
                 </div>
-                
-                {/* Order items */}
-                <div style={{ marginBottom: "25px" }}>
-                  <h3 style={{ 
-                    fontSize: "1.1rem", 
-                    fontWeight: "500",
-                    marginBottom: "15px",
-                    color: "var(--primary-color)"
-                  }}>
-                    Items
-                  </h3>
-                  
-                  {order.items.map((item) => (
+
+                {/* Order Items */}
+                <div style={{ marginBottom: "30px" }}>
+                  {(order.items || []).map((item, index) => (
                     <div 
-                      key={item._id} 
-                      style={{ 
-                        display: "flex", 
+                      key={index}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
                         alignItems: "center",
                         padding: "15px 0",
-                        borderBottom: "1px solid var(--border-color)"
+                        borderBottom: index < order.items.length - 1 ? "1px solid var(--border-color)" : "none"
                       }}
                     >
-                      <div style={{ width: "60px", marginRight: "15px" }}>
+                      <div style={{ display: "flex", alignItems: "center" }}>
                         <img 
                           src={item.image} 
-                          alt={item.title} 
-                          style={{ 
-                            width: "100%",
+                          alt={item.title}
+                          style={{
+                            width: "60px",
                             height: "80px",
-                            objectFit: "cover"
-                          }} 
+                            objectFit: "cover",
+                            marginRight: "20px"
+                          }}
                         />
+                        <div>
+                          <h3 style={{ 
+                            fontSize: "1.1rem", 
+                            marginBottom: "5px",
+                            color: "var(--primary-color)"
+                          }}>
+                            {item.title}
+                          </h3>
+                          <p style={{ 
+                            color: "var(--light-text)",
+                            fontSize: "0.9rem"
+                          }}>
+                            Quantity: {item.quantity}
+                          </p>
+                          <p style={{ 
+                            color: "var(--primary-color)",
+                            fontWeight: "500"
+                          }}>
+                            ${item.price}
+                          </p>
+                        </div>
                       </div>
-                      <div style={{ flex: "1" }}>
-                        <h4 style={{ 
-                          fontSize: "1rem",
-                          fontWeight: "500",
-                          marginBottom: "5px"
-                        }}>
-                          {item.title}
-                        </h4>
-                        <p style={{ 
-                          color: "var(--light-text)",
-                          fontSize: "0.9rem",
-                          marginBottom: "5px"
-                        }}>
-                          {item.author}
-                        </p>
-                        <p style={{ 
-                          color: "var(--light-text)",
-                          fontSize: "0.9rem"
-                        }}>
-                          Qty: {item.quantity}
-                        </p>
-                      </div>
-                      <div style={{ 
-                        fontWeight: "500",
-                        fontSize: "1rem",
-                        marginLeft: "15px"
-                      }}>
-                        ${(parseFloat(item.price) * item.quantity).toFixed(2)}
-                      </div>
+                      
+                      {/* Only show Leave Review button if order status is "delivered" */}
+                      {order.status.toLowerCase() === "delivered" && (
+                        <Link
+                          to={`/book/${item._id}?orderId=${order.orderId || order._id}`}
+                          style={{
+                            padding: "8px 15px",
+                            backgroundColor: "var(--primary-color)",
+                            color: "white",
+                            textDecoration: "none",
+                            borderRadius: "4px",
+                            fontSize: "0.9rem",
+                            marginLeft: "15px"
+                          }}
+                        >
+                          Leave Review
+                        </Link>
+                      )}
                     </div>
                   ))}
                 </div>
-                
-                {/* Order summary */}
+
+                {/* Order Summary and Invoice Button */}
                 <div style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  marginBottom: "25px"
+                  alignItems: "center",
+                  paddingTop: "20px",
+                  borderTop: "1px solid var(--border-color)"
                 }}>
-                  <div style={{ flex: "1" }}>
-                    <h3 style={{ 
-                      fontSize: "1.1rem", 
+                  <div>
+                    <p style={{
+                      fontSize: "1.1rem",
                       fontWeight: "500",
-                      marginBottom: "15px",
                       color: "var(--primary-color)"
                     }}>
-                      Shipping Address
-                    </h3>
-                    <p style={{ marginBottom: "5px" }}>{order.shippingInfo.name}</p>
-                    <p style={{ marginBottom: "5px" }}>{order.shippingInfo.address}</p>
-                    <p style={{ marginBottom: "5px" }}>{order.shippingInfo.city}, {order.shippingInfo.state} {order.shippingInfo.zip}</p>
-                    <p style={{ marginBottom: "5px" }}>{order.shippingInfo.country}</p>
-                    <p>{order.shippingInfo.phone}</p>
+                      Total: ${order.total}
+                    </p>
                   </div>
                   
-                  <div style={{ width: "300px", paddingLeft: "20px" }}>
-                    <h3 style={{ 
-                      fontSize: "1.1rem", 
-                      fontWeight: "500",
-                      marginBottom: "15px",
-                      color: "var(--primary-color)"
-                    }}>
-                      Order Summary
-                    </h3>
-                    
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between",
-                      marginBottom: "10px"
-                    }}>
-                      <span style={{ color: "var(--light-text)" }}>Subtotal</span>
-                      <span>${order.total.toFixed(2)}</span>
-                    </div>
-                    
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between",
-                      marginBottom: "10px"
-                    }}>
-                      <span style={{ color: "var(--light-text)" }}>Shipping</span>
-                      <span>Free</span>
-                    </div>
-                    
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between",
-                      marginTop: "15px",
-                      paddingTop: "15px",
-                      borderTop: "1px solid var(--border-color)",
-                      fontWeight: "500"
-                    }}>
-                      <span>Total</span>
-                      <span>${order.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Order actions */}
-                <div style={{ display: "flex", justifyContent: "center", gap: "15px" }}>
                   <Link 
-                    to={`/invoice/${order.orderId}`}
+                    to={`/invoice/${order.orderId || order._id}`}
                     style={{
                       padding: "10px 20px",
                       border: "1px solid var(--border-color)",
@@ -269,18 +261,6 @@ const OrderHistory = () => {
                       textDecoration: "none",
                       fontSize: "0.9rem",
                       fontWeight: "500"
-                    }}
-                    onClick={async (e) => {
-                      // Try to ensure an invoice exists for this order before navigating
-                      try {
-                        // We'll generate the invoice in the background if it doesn't exist
-                        await axios.post(`http://localhost:3001/api/invoices/generate`, {
-                          orderData: order
-                        });
-                      } catch (error) {
-                        console.error('Error pre-generating invoice:', error);
-                        // Continue navigation even if this fails - the InvoicePage will handle it
-                      }
                     }}
                   >
                     VIEW INVOICE

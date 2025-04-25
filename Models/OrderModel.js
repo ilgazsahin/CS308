@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const OrderSchema = new mongoose.Schema({
     orderId: {
         type: Number,
-        required: true
+        required: true,
+        unique: true
     },
     orderNumber: {
         type: Number,
@@ -39,10 +40,15 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    /** The only values your React dropdown offers */
     status: {
         type: String,
-        default: 'Pending'
-    }
-}, { timestamps: true });
+        enum: ['processing', 'in-transit', 'delivered'],
+        default: 'processing',
+        lowercase: true       // guarantees stored values are lower-case
+      }
+    },
+    { timestamps: true }
+  );
 
 module.exports = mongoose.model('Order', OrderSchema); 
