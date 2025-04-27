@@ -77,26 +77,33 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // Helper to merge cart items, preferring higher quantities
+  // Helper to merge cart items, keeping all items and preferring higher quantities
   const mergeCartItems = (localItems, serverItems) => {
-    const mergedCart = [...localItems];
+    // Create a map for faster lookups based on product ID
+    const mergedItemsMap = new Map();
     
+    // First, add all items from localStorage to the map
+    localItems.forEach(item => {
+      mergedItemsMap.set(item._id, { ...item });
+    });
+    
+    // Then, process server items
     serverItems.forEach(serverItem => {
-      const localItemIndex = mergedCart.findIndex(item => item._id === serverItem._id);
+      const existingItem = mergedItemsMap.get(serverItem._id);
       
-      if (localItemIndex >= 0) {
+      if (existingItem) {
         // Item exists in both carts, keep higher quantity
-        const localQuantity = mergedCart[localItemIndex].quantity;
-        const serverQuantity = serverItem.quantity;
-        
-        mergedCart[localItemIndex].quantity = Math.max(localQuantity, serverQuantity);
+        existingItem.quantity = Math.max(existingItem.quantity, serverItem.quantity);
+        // Update the map
+        mergedItemsMap.set(serverItem._id, existingItem);
       } else {
         // Item only in server cart, add it
-        mergedCart.push(serverItem);
+        mergedItemsMap.set(serverItem._id, { ...serverItem });
       }
     });
     
-    return mergedCart;
+    // Convert map back to array
+    return Array.from(mergedItemsMap.values());
   };
 
   // Update cart whenever items change
@@ -237,16 +244,18 @@ export const CartProvider = ({ children }) => {
       const response = await axios.get(`http://localhost:3001/api/carts/${newUserId}`);
       const serverCart = response.data || [];
       
-      // Merge carts, preferring higher quantities
+      // Merge carts, keeping all items and preferring higher quantities
       const mergedItems = mergeCartItems(localCart, serverCart);
       
       // Update state
       setCartItems(mergedItems);
       
       // Save merged cart to server
-      await axios.post(`http://localhost:3001/api/carts/${newUserId}`, {
-        items: mergedItems
-      });
+      if (mergedItems.length > 0) {
+        await axios.post(`http://localhost:3001/api/carts/${newUserId}`, {
+          items: mergedItems
+        });
+      }
       
       // Clear localStorage cart now that it's saved to server
       localStorage.removeItem('cart');

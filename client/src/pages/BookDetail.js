@@ -258,7 +258,7 @@ const BookDetail = () => {
             // Clear form
             setCommentText("");
             setNewRating(0);
-            
+
             // Refresh reviews
             const response = await axios.get(`http://localhost:3001/api/comments/${id}`);
             setReviews(response.data.reviews);
@@ -370,7 +370,7 @@ const BookDetail = () => {
             </style>
             
             <NavigationBar />
-            
+
             <div className="container" style={{padding: "60px 0"}}>
                 {/* Breadcrumb */}
                 <div style={{marginBottom: "40px"}}>
@@ -431,7 +431,7 @@ const BookDetail = () => {
                             color: "var(--light-text)",
                             marginBottom: "10px"
                         }}><strong>Author:</strong> {book.author}</p>
-                        
+
                         {book.publishedYear && (
                             <p style={{
                                 fontSize: "1rem",

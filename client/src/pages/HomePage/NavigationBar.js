@@ -313,7 +313,7 @@ const NavigationBar = () => {
                         <Link to="/home" className="nav-link">HOME</Link>
                         <Link to="/about" className="nav-link">ABOUT</Link>
                         <Link to="/products" className="nav-link">PRODUCTS</Link>
-                    </nav>
+        </nav>
 
                     {/* Right section with search bar - also aligned to bottom */}
                     <div style={{
