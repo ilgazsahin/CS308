@@ -1,7 +1,7 @@
 // at project root, next to package.json
 module.exports = {
     // 1) where to look for your tests
-    testMatch: ['/_tests_//*.test.[jt]s?(x)'],
+    testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
 
     // 2) how to transform your files
     transform: {
