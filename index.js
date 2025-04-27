@@ -11,6 +11,9 @@ const CommentController = require("./Controller/CommentController");
 const OrderController = require("./Controller/OrderController");
 const RatingController = require("./Controller/RatingController");
 
+// Import the simplified email service
+const { sendSimpleOrderEmail } = require('./utils/simplifiedEmailService');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = 'your_jwt_secret_key'; // Consider storing this in an environment variable
@@ -20,7 +23,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
+mongoose.connect("mongodb://localhost:27017/MyLocalBookstore", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -73,6 +76,38 @@ app.use("/api/books", BookController);
 app.use("/api/comments", CommentController);
 app.use("/api/orders", OrderController);
 app.use("/api/ratings", RatingController);
+
+// Simple test route for emails
+app.post('/test-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required' });
+    }
+    
+    // Create a test order
+    const testOrder = {
+      _id: "TEST-" + Date.now(),
+      items: [
+        { title: "Test Book", quantity: 1, price: 19.99 }
+      ],
+      total: 19.99,
+      status: 'processing'
+    };
+    
+    const result = await sendSimpleOrderEmail(testOrder, email);
+    
+    if (result.success) {
+      res.json({ success: true, message: 'Test email sent successfully' });
+    } else {
+      res.status(500).json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    console.error('Error in test email route:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
