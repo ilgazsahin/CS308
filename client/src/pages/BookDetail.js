@@ -214,8 +214,12 @@ const BookDetail = () => {
                 return;
             }
 
+            let ratingSubmitted = false;
+            let commentSubmitted = false;
+            let ratingExists = false;
+
             // Submit rating if provided and no existing rating
-            if (newRating > 0 && !hasExistingRating) {
+            if (newRating > 0) {
                 try {
                     const ratingData = {
                         userId,
@@ -223,9 +227,15 @@ const BookDetail = () => {
                         orderId
                     };
                     
-                    await axios.post(`http://localhost:3001/api/ratings/${id}`, ratingData);
-                    setNewRating(0);  
-                    setHasExistingRating(false);
+                    if (!hasExistingRating) {
+                        await axios.post(`http://localhost:3001/api/ratings/${id}`, ratingData);
+                        ratingSubmitted = true;
+                        setHasExistingRating(true);
+                    } else {
+                        // Rating already exists
+                        ratingExists = true;
+                    }
+                    setNewRating(0);
                 } catch (error) {
                     if (error.response?.data?.message) {
                         alert(error.response.data.message);
@@ -239,12 +249,13 @@ const BookDetail = () => {
             if (commentText.trim() && !hasExistingComment) {
                 try {
                     const commentData = {
-                userId,
+                        userId,
                         text: commentText.trim(),
                         orderId
                     };
                     
                     await axios.post(`http://localhost:3001/api/comments/${id}`, commentData);
+                    commentSubmitted = true;
                     setHasExistingComment(true);
                 } catch (error) {
                     if (error.response?.data?.message) {
@@ -265,7 +276,20 @@ const BookDetail = () => {
             setAverageRating(response.data.averageRating);
             setTotalRatings(response.data.totalRatings);
             
-            alert("Thank you for your review! If you added a comment, it will be visible after approval.");
+            // Display appropriate message based on what was submitted
+            if (ratingExists && !commentSubmitted) {
+                alert("You have already submitted a rating for this book with this order.");
+            } else if (commentSubmitted && ratingSubmitted) {
+                alert("Thank you for your review! Your comment will be visible after approval.");
+            } else if (commentSubmitted) {
+                alert("Thank you for your comment! It will be visible after approval.");
+            } else if (ratingSubmitted && hasExistingComment) {
+                alert("Your rating has been submitted. You've already left a comment for this book.");
+            } else if (ratingSubmitted) {
+                alert("Thank you for your rating!");
+            } else {
+                alert("No changes were made to your review.");
+            }
         } catch (error) {
             console.error("Error submitting review:", error);
             alert("Failed to submit review. Please try again.");
