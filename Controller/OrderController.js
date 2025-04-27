@@ -3,6 +3,7 @@ const router = express.Router();
 const OrderModel = require("../Models/OrderModel");
 const BookModel = require("../Models/BookModel"); 
 const axios = require("axios");
+const { sendOrderConfirmation } = require("../utils/emailService");
 
 // Get all orders (for admin) - Moving this route to the top
 router.get("/", async (req, res) => {
@@ -44,6 +45,17 @@ router.post("/", async (req, res) => {
         orderData.orderDate = new Date();
 
         const newOrder = await OrderModel.create(orderData);
+        
+        // Send confirmation email if customer email is provided in shippingInfo
+        if (orderData.shippingInfo && orderData.shippingInfo.email) {
+            try {
+                await sendOrderConfirmation(newOrder, orderData.shippingInfo.email);
+                console.log(`Order confirmation email sent to ${orderData.shippingInfo.email}`);
+            } catch (emailError) {
+                console.error("Error sending order confirmation email:", emailError);
+                // Continue processing even if email fails
+            }
+        }
 
         res.status(201).json({
             message: "Order created successfully",
@@ -148,6 +160,17 @@ router.get("/:orderId", async (req, res) => {
          if (!updatedOrder) {
              return res.status(404).json({ message: "Order not found" });
          }
+         
+         // Send status update email if order has customer email in shippingInfo
+         if (updatedOrder.shippingInfo && updatedOrder.shippingInfo.email && status === "delivered") {
+             try {
+                 await sendOrderConfirmation(updatedOrder, updatedOrder.shippingInfo.email);
+                 console.log(`Order status update email sent to ${updatedOrder.shippingInfo.email}`);
+             } catch (emailError) {
+                 console.error("Error sending order status update email:", emailError);
+                 // Continue processing even if email fails
+             }
+         }
  
          res.json({ message: "Order status updated", order: updatedOrder });
      } catch (err) {
@@ -155,5 +178,75 @@ router.get("/:orderId", async (req, res) => {
          res.status(500).json({ message: "Error updating order status", error: err.message });
      }
  });
- 
- module.exports = router;
+
+// Test route for email sending (remove in production)
+router.post("/test-email", async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ message: "Email address is required" });
+        }
+        
+        // Create a sample order for testing
+        const testOrder = {
+            _id: "TEST-ORDER-" + Date.now(),
+            orderId: Date.now(),
+            createdAt: new Date(),
+            items: [
+                { 
+                    _id: "book1", 
+                    title: "The Great Gatsby", 
+                    author: "F. Scott Fitzgerald",
+                    quantity: 2, 
+                    price: 19.99,
+                    image: "https://example.com/book1.jpg"
+                },
+                { 
+                    _id: "book2", 
+                    title: "To Kill a Mockingbird", 
+                    author: "Harper Lee",
+                    quantity: 1, 
+                    price: 14.99,
+                    image: "https://example.com/book2.jpg"
+                }
+            ],
+            totalAmount: 54.97,
+            total: 54.97,
+            shippingInfo: {
+                name: "John Doe",
+                email: email,
+                address: "123 Test Street",
+                city: "Test City",
+                state: "TS",
+                zip: "12345",
+                country: "Turkey",
+                phone: "555-123-4567"
+            },
+            status: "processing",
+            userId: "user123"
+        };
+        
+        const result = await sendOrderConfirmation(testOrder, email);
+        
+        if (result.success) {
+            res.json({ 
+                message: "Test email sent successfully with invoice PDF", 
+                details: result 
+            });
+        } else {
+            res.status(500).json({ 
+                message: "Failed to send test email", 
+                error: result.error 
+            });
+        }
+    } catch (err) {
+        console.error("Error sending test email:", err);
+        res.status(500).json({ 
+            message: "Error sending test email", 
+            error: err.message 
+        });
+    }
+});
+
+module.exports = router;
