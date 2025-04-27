@@ -1,17 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaFilter } from "react-icons/fa";
 
 const ProductsPage = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [books, setBooks] = useState([]);
     const [displayedBooks, setDisplayedBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sortOption, setSortOption] = useState("default"); // default, name-asc, name-desc, price-asc, price-desc, rating-desc, rating-asc
     const [searchQuery, setSearchQuery] = useState(""); // New state for search query
     const [bookRatings, setBookRatings] = useState({}); // Store book ratings
+    const [categories, setCategories] = useState([]); // Available categories
+    const [selectedCategory, setSelectedCategory] = useState(""); // Selected category filter
+
+    // Parse query parameters when component mounts or URL changes
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const categoryParam = queryParams.get('category');
+        const searchParam = queryParams.get('search');
+        
+        if (categoryParam) {
+            setSelectedCategory(categoryParam);
+        }
+        
+        if (searchParam) {
+            setSearchQuery(searchParam);
+        }
+    }, [location.search]);
 
     useEffect(() => {
         async function fetchBooks() {
@@ -32,7 +51,19 @@ const ProductsPage = () => {
                 setLoading(false);
             }
         }
+        
+        async function fetchCategories() {
+            try {
+                const response = await axios.get("http://localhost:3001/api/books/categories");
+                setCategories(response.data);
+            } catch (error) {
+                console.error("An error occurred while fetching categories:", error);
+                setCategories([]);
+            }
+        }
+        
         fetchBooks();
+        fetchCategories();
     }, []);
 
     // Fetch ratings for all books
@@ -60,27 +91,55 @@ const ProductsPage = () => {
     // Handle sort changes
     const handleSort = (option) => {
         setSortOption(option);
-        setDisplayedBooks(sortBooks(filterBooksBySearch(books, searchQuery), option));
+        setDisplayedBooks(sortBooks(filterBooks(books, searchQuery, selectedCategory), option));
     };
     
-    // Search functionality
-    const filterBooksBySearch = (booksToFilter, query) => {
-        if (!query) return booksToFilter;
+    // Filter books by search and category
+    const filterBooks = (booksToFilter, query, category) => {
+        let filtered = booksToFilter;
         
-        const searchTerms = query.toLowerCase().trim().split(' ');
-        return booksToFilter.filter(book => {
-            const searchString = `${book.title} ${book.author} ${book.description || ''}`.toLowerCase();
-            return searchTerms.some(term => searchString.includes(term));
+        // Apply search filter
+        if (query) {
+            const searchTerm = query.toLowerCase().trim();
+            filtered = filtered.filter(book => {
+                const searchString = `${book.title} ${book.author} ${book.description || ''}`.toLowerCase();
+                return searchString.includes(searchTerm);
+            });
+        }
+        
+        // Apply category filter
+        if (category) {
+            filtered = filtered.filter(book => book.category === category);
+        }
+        
+        return filtered;
+    };
+    
+    // Handle category filter change
+    const handleCategoryChange = (category) => {
+        setSelectedCategory(category);
+        
+        // Update URL with category parameter
+        const queryParams = new URLSearchParams(location.search);
+        if (category) {
+            queryParams.set('category', category);
+        } else {
+            queryParams.delete('category');
+        }
+        
+        navigate({
+            pathname: location.pathname,
+            search: queryParams.toString()
         });
     };
     
-    // Apply search and sort when books data or search query changes
+    // Apply search, category, and sort when books data or filters change
     useEffect(() => {
         if (books.length > 0) {
-            const filteredBooks = filterBooksBySearch(books, searchQuery);
+            const filteredBooks = filterBooks(books, searchQuery, selectedCategory);
             setDisplayedBooks(sortBooks(filteredBooks));
         }
-    }, [books, searchQuery]);
+    }, [books, searchQuery, selectedCategory]);
 
     // Sort books helper function
     const sortBooks = (booksToSort, option = sortOption) => {
@@ -125,7 +184,19 @@ const ProductsPage = () => {
     // Handle search form submit
     const handleSearchSubmit = (e) => {
         e.preventDefault();
-        // Search is already handled by the useEffect
+        
+        // Update URL with search parameter
+        const queryParams = new URLSearchParams(location.search);
+        if (searchQuery.trim()) {
+            queryParams.set('search', searchQuery);
+        } else {
+            queryParams.delete('search');
+        }
+        
+        navigate({
+            pathname: location.pathname,
+            search: queryParams.toString()
+        });
     };
 
     // Function to render rating stars
@@ -146,7 +217,18 @@ const ProductsPage = () => {
                     if (i < fullStars) {
                         return <span key={i}>★</span>; // Full star
                     } else if (i === fullStars && hasHalfStar) {
-                        return <span key={i}>⯨</span>; // Half star (approximation)
+                        return (
+                            <span key={i} style={{ position: "relative" }}>
+                                <span style={{ color: "#e0e0e0" }}>☆</span>
+                                <span style={{ 
+                                    position: "absolute", 
+                                    left: 0,
+                                    top: 0,
+                                    width: "50%",
+                                    overflow: "hidden" 
+                                }}>★</span>
+                            </span>
+                        ); // Half star
                     } else {
                         return <span key={i} style={{ color: "#e0e0e0" }}>☆</span>; // Empty star
                     }
@@ -206,6 +288,43 @@ const ProductsPage = () => {
         return null;
     };
 
+    // Function to render category badge
+    const getCategoryBadge = (category) => {
+        if (!category) return null;
+        
+        return (
+            <div style={{
+                position: "absolute",
+                top: "10px",
+                left: "10px",
+                backgroundColor: "var(--primary-color)",
+                color: "#ffffff",
+                padding: "5px 10px",
+                borderRadius: "4px",
+                fontWeight: "500",
+                fontSize: "0.8rem",
+                zIndex: 2
+            }}>
+                {category}
+            </div>
+        );
+    };
+
+    // Listen for URL search parameter changes from the header search
+    useEffect(() => {
+        const handleUrlSearchUpdate = (event) => {
+            if (event.detail && event.detail.search !== undefined) {
+                setSearchQuery(event.detail.search);
+            }
+        };
+        
+        window.addEventListener('urlSearchUpdate', handleUrlSearchUpdate);
+        
+        return () => {
+            window.removeEventListener('urlSearchUpdate', handleUrlSearchUpdate);
+        };
+    }, []);
+
     return (
         <div style={{ backgroundColor: "var(--light-bg)", minHeight: "100vh" }}>
             <NavigationBar />
@@ -227,6 +346,16 @@ const ProductsPage = () => {
                         color: "var(--primary-color)",
                         fontSize: "0.9rem"
                     }}>Products</span>
+                    {selectedCategory && (
+                        <>
+                            <span style={{margin: "0 10px", color: "var(--light-text)"}}>›</span>
+                            <span style={{
+                                color: "var(--primary-color)",
+                                fontSize: "0.9rem",
+                                fontWeight: "500"
+                            }}>{selectedCategory}</span>
+                        </>
+                    )}
                 </div>
 
                 <h1 style={{
@@ -236,49 +365,94 @@ const ProductsPage = () => {
                     marginBottom: "30px",
                     color: "var(--primary-color)",
                     textAlign: "center"
-                }}>All Products</h1>
+                }}>
+                    {selectedCategory ? `${selectedCategory} Books` : "All Products"}
+                </h1>
 
-                {/* Search Bar */}
-                {!loading && (
+                {/* Active filters display */}
+                {!loading && (selectedCategory || searchQuery) && (
                     <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        marginBottom: "20px",
+                        flexWrap: "wrap",
+                        justifyContent: "center",
                         maxWidth: "500px",
-                        margin: "0 auto 40px auto"
+                        margin: "0 auto 30px auto"
                     }}>
-                        <form onSubmit={handleSearchSubmit} style={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center",
-                            position: "relative"
-                        }}>
-                            <input
-                                type="text"
-                                placeholder="Search by title, author, or description..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                                style={{
-                                    width: "100%",
-                                    padding: "12px 20px",
-                                    border: "1px solid var(--border-color)",
-                                    borderRadius: "4px",
-                                    fontSize: "0.95rem",
-                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
-                                }}
-                            />
+                        {selectedCategory && (
+                            <div style={{
+                                background: "var(--primary-color)",
+                                color: "white",
+                                padding: "5px 12px",
+                                borderRadius: "15px",
+                                fontSize: "0.85rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px"
+                            }}>
+                                Category: {selectedCategory}
+                                <span 
+                                    onClick={() => handleCategoryChange("")}
+                                    style={{ cursor: "pointer", fontWeight: "bold" }}
+                                >
+                                    ×
+                                </span>
+                            </div>
+                        )}
+                        
+                        {searchQuery && (
+                            <div style={{
+                                background: "var(--primary-color)",
+                                color: "white",
+                                padding: "5px 12px",
+                                borderRadius: "15px",
+                                fontSize: "0.85rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px"
+                            }}>
+                                Search: "{searchQuery}"
+                                <span 
+                                    onClick={() => {
+                                        setSearchQuery("");
+                                        // Update URL to remove search parameter
+                                        const queryParams = new URLSearchParams(location.search);
+                                        queryParams.delete('search');
+                                        navigate({
+                                            pathname: location.pathname,
+                                            search: queryParams.toString()
+                                        });
+                                    }}
+                                    style={{ cursor: "pointer", fontWeight: "bold" }}
+                                >
+                                    ×
+                                </span>
+                            </div>
+                        )}
+                        
+                        {(selectedCategory || searchQuery) && (
                             <button
-                                type="submit"
+                                onClick={() => {
+                                    // Clear both category and search
+                                    handleCategoryChange("");
+                                    setSearchQuery("");
+                                    // Clear URL parameters
+                                    navigate(location.pathname);
+                                }}
                                 style={{
-                                    position: "absolute",
-                                    right: "15px",
                                     background: "none",
                                     border: "none",
-                                    cursor: "pointer",
                                     color: "var(--primary-color)",
-                                    fontSize: "1rem"
+                                    textDecoration: "underline",
+                                    cursor: "pointer",
+                                    fontSize: "0.85rem"
                                 }}
                             >
-                                <FaSearch />
+                                Clear All
                             </button>
-                        </form>
+                        )}
                     </div>
                 )}
 
@@ -374,6 +548,7 @@ const ProductsPage = () => {
                                         flexGrow: 0
                                     }}>
                                         {getStockBadge(book.stock)}
+                                        {getCategoryBadge(book.category)}
                                         <img
                                             src={book.image}
                                             alt={book.title}
@@ -424,11 +599,18 @@ const ProductsPage = () => {
                         backgroundColor: "white",
                         marginBottom: "50px"
                     }}>
-                        {searchQuery ? (
+                        {searchQuery || selectedCategory ? (
                             <div>
-                                <p style={{marginBottom: "20px"}}>No books found matching "{searchQuery}"</p>
+                                <p style={{marginBottom: "20px"}}>
+                                    No books found matching your criteria
+                                    {searchQuery ? ` "${searchQuery}"` : ""}
+                                    {selectedCategory ? ` in category "${selectedCategory}"` : ""}
+                                </p>
                                 <button
-                                    onClick={() => setSearchQuery("")}
+                                    onClick={() => {
+                                        handleCategoryChange("");
+                                        setSearchQuery("");
+                                    }}
                                     style={{
                                         padding: "10px 20px",
                                         backgroundColor: "var(--primary-color)",
@@ -439,7 +621,7 @@ const ProductsPage = () => {
                                         fontWeight: "500"
                                     }}
                                 >
-                                    Clear Search
+                                    Clear Filters
                                 </button>
                             </div>
                         ) : (

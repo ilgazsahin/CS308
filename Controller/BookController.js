@@ -2,6 +2,17 @@ const express = require("express");
 const router = express.Router();
 const BookModel = require("../Models/BookModel");
 
+// Get All Categories - Moving this route before the ID route to avoid path conflicts
+router.get("/categories", async (req, res) => {
+    try {
+        // Extract categories from the model's schema
+        const categories = BookModel.schema.path('category').enumValues;
+        res.json(categories);
+    } catch (err) {
+        res.status(500).json({ message: "Categories could not be retrieved", error: err.message });
+    }
+});
+
 // Add Book Endpoint
 router.post("/", async (req, res) => {
     try {
@@ -15,7 +26,15 @@ router.post("/", async (req, res) => {
 // Get All Books Endpoint
 router.get("/", async (req, res) => {
     try {
-        const books = await BookModel.find();
+        const { category } = req.query;
+        const filter = {};
+        
+        // Add category filter if provided
+        if (category) {
+            filter.category = category;
+        }
+        
+        const books = await BookModel.find(filter);
         res.json(books);
     } catch (err) {
         res.status(500).json({ message: "Books could not be retrieved", error: err.message });
@@ -34,7 +53,6 @@ router.get("/:id", async (req, res) => {
         res.status(500).json({ message: "Error retrieving book", error: err.message });
     }
 });
-
 
 // Update a book by ID
 router.put("/:id", async (req, res) => {

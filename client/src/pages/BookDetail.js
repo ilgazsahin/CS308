@@ -239,7 +239,7 @@ const BookDetail = () => {
             if (commentText.trim() && !hasExistingComment) {
                 try {
                     const commentData = {
-                        userId,
+                userId,
                         text: commentText.trim(),
                         orderId
                     };
@@ -380,7 +380,7 @@ const BookDetail = () => {
                     <span style={{margin: "0 10px", color: "var(--light-text)"}}>›</span>
                     <span style={{color: "var(--primary-color)"}}>{book.title}</span>
                 </div>
-                
+
                 <div style={{
                     display: "flex", 
                     gap: "60px",
@@ -490,9 +490,9 @@ const BookDetail = () => {
                                 fontWeight: "500",
                                 fontSize: "0.9rem"
                             }}>ADD TO WISHLIST</button>
-                        </div>
                     </div>
                 </div>
+            </div>
 
                 {/* Book Rating Summary */}
                 <div style={{
@@ -528,13 +528,46 @@ const BookDetail = () => {
                             </span>
                             <div>
                                 <div style={{display: "flex", marginBottom: "5px"}}>
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <span key={star} style={{
-                                            color: star <= Math.round(averageRating) ? "var(--accent-color)" : "#ddd",
-                                            fontSize: "1.2rem",
-                                            marginRight: "2px"
-                                        }}>★</span>
-                                    ))}
+                                    {[1, 2, 3, 4, 5].map((star) => {
+                                        const fullStars = Math.floor(averageRating);
+                                        const hasHalfStar = averageRating % 1 >= 0.5;
+                                        
+                                        if (star <= fullStars) {
+                                            return (
+                                                <span key={star} style={{
+                                                    color: "var(--accent-color)",
+                                                    fontSize: "1.2rem",
+                                                    marginRight: "2px"
+                                                }}>★</span>
+                                            ); // Full star
+                                        } else if (star === fullStars + 1 && hasHalfStar) {
+                                            return (
+                                                <span key={star} style={{ 
+                                                    position: "relative",
+                                                    fontSize: "1.2rem",
+                                                    marginRight: "2px"
+                                                }}>
+                                                    <span style={{ color: "#ddd" }}>☆</span>
+                                                    <span style={{ 
+                                                        position: "absolute", 
+                                                        left: 0,
+                                                        top: 0,
+                                                        width: "50%",
+                                                        overflow: "hidden",
+                                                        color: "var(--accent-color)"
+                                                    }}>★</span>
+                                                </span>
+                                            ); // Half star
+                                        } else {
+                                            return (
+                                                <span key={star} style={{
+                                                    color: "#ddd",
+                                                    fontSize: "1.2rem",
+                                                    marginRight: "2px"
+                                                }}>☆</span>
+                                            ); // Empty star
+                                        }
+                                    })}
                                 </div>
                                 <span style={{color: "var(--light-text)", fontSize: "0.9rem"}}>
                                     {totalRatings} {totalRatings === 1 ? 'rating' : 'ratings'}
@@ -588,7 +621,7 @@ const BookDetail = () => {
                                     }}>
                                         Your Review
                                     </label>
-                                    <textarea
+                            <textarea
                                         value={commentText}
                                         onChange={(e) => setCommentText(e.target.value)}
                                         style={{
@@ -599,8 +632,8 @@ const BookDetail = () => {
                                             height: "150px",
                                             resize: "vertical"
                                         }}
-                                    />
-                                </div>
+                            />
+                        </div>
                             )}
 
                             {(!hasExistingComment || !hasExistingRating) && (

@@ -22,17 +22,17 @@ function Login() {
     try {
       const result = await axios.post("http://localhost:3001/api/users/login", { email, password });
       
-      if (result.data && result.data.message === "Login successful") {
-        // Store the token
-        localStorage.setItem("token", result.data.token);
-    
+        if (result.data && result.data.message === "Login successful") {
+          // Store the token
+          localStorage.setItem("token", result.data.token);
+      
         // Store the userId
         const userId = result.data.user.id || result.data.user._id;
         localStorage.setItem("userId", userId);
 
-        // Store userName
-        localStorage.setItem("userName", result.data.user.name);
-    
+          // Store userName
+          localStorage.setItem("userName", result.data.user.name);
+      
         // Handle cart merging
         await handleLogin(userId);
     
@@ -40,16 +40,16 @@ function Login() {
         const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/home';
         sessionStorage.removeItem('redirectAfterLogin');
         navigate(redirectPath);
-      } else {
-        setErrorMessage("Invalid credentials or unexpected response!");
-      }
+        } else {
+          setErrorMessage("Invalid credentials or unexpected response!");
+        }
     } catch (err) {
-      // If there's an error from the server, display it
-      if (err.response && err.response.data.message) {
-        setErrorMessage(err.response.data.message);
-      } else {
-        setErrorMessage("Invalid email or password!");
-      }
+        // If there's an error from the server, display it
+        if (err.response && err.response.data.message) {
+          setErrorMessage(err.response.data.message);
+        } else {
+          setErrorMessage("Invalid email or password!");
+        }
     } finally {
       setIsLoading(false);
     }
@@ -61,14 +61,14 @@ function Login() {
       
       <div className="container">
         <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
+        display: "flex",
+        justifyContent: "center",
           padding: "80px 0" 
         }}>
           <div style={{ 
             backgroundColor: "white", 
             padding: "40px", 
-            width: "100%", 
+          width: "100%",
             maxWidth: "500px"
           }}>
             <h1 style={{ 
@@ -117,7 +117,7 @@ function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "12px 15px", 
                     border: "1px solid var(--border-color)", 
                     fontSize: "1rem",
@@ -147,7 +147,7 @@ function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "12px 15px", 
                     border: "1px solid var(--border-color)", 
                     fontSize: "1rem",
@@ -162,11 +162,11 @@ function Login() {
                   className="btn btn-primary"
                   disabled={isLoading}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "14px", 
                     backgroundColor: isLoading ? "#ccc" : "var(--primary-color)", 
                     color: "white", 
-                    border: "none", 
+              border: "none",
                     cursor: isLoading ? "not-allowed" : "pointer",
                     fontWeight: "500",
                     fontSize: "0.9rem",
@@ -178,7 +178,7 @@ function Login() {
               </div>
 
               <div style={{ 
-                textAlign: "center", 
+              textAlign: "center",
                 color: "var(--light-text)",
                 fontSize: "0.9rem"
               }}>
@@ -187,7 +187,7 @@ function Login() {
                     to="/register" 
                     style={{ 
                       color: "var(--primary-color)", 
-                      textDecoration: "none",
+              textDecoration: "none",
                       fontWeight: "500"
                     }}
                   >

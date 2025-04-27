@@ -488,95 +488,6 @@ const InvoicePage = () => {
           maxWidth: "800px",
           margin: "30px auto 0"
         }}>
-          {/* Email Form */}
-          <div style={{ 
-            backgroundColor: "white", 
-            padding: "20px", 
-            marginBottom: "30px",
-            borderRadius: "4px",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
-          }}>
-            <h3 style={{ 
-              fontSize: "1.2rem", 
-              marginBottom: "15px", 
-              fontFamily: "'Playfair Display', serif",
-              color: "var(--primary-color)"
-            }}>
-              Email Invoice
-            </h3>
-            
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "10px",
-              maxWidth: "500px",
-              margin: "0 auto"
-            }}>
-              <input 
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email address"
-                style={{
-                  flex: "1",
-                  padding: "12px 15px",
-                  border: emailError ? "1px solid #dc3545" : "1px solid var(--border-color)",
-                  borderRadius: "4px",
-                  fontSize: "0.95rem"
-                }}
-                disabled={sendingEmail || emailSent}
-              />
-              <button 
-                onClick={handleSendEmail}
-                disabled={sendingEmail || emailSent}
-                style={{
-                  padding: "12px 20px",
-                  backgroundColor: emailSent ? "#4b6043" : "var(--primary-color)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  fontWeight: "500",
-                  cursor: sendingEmail || emailSent ? "default" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: "150px"
-                }}
-              >
-                {sendingEmail ? (
-                  <span>Sending...</span>
-                ) : emailSent ? (
-                  <span>✓ Sent</span>
-                ) : (
-                  <span>Send as PDF</span>
-                )}
-              </button>
-            </div>
-            
-            {emailError && (
-              <p style={{ 
-                color: "#dc3545", 
-                fontSize: "0.85rem", 
-                marginTop: "8px",
-                textAlign: "left",
-                maxWidth: "500px",
-                margin: "8px auto 0"
-              }}>
-                {emailError}
-              </p>
-            )}
-            
-            {emailSent && (
-              <p style={{ 
-                color: "#4b6043", 
-                fontSize: "0.9rem", 
-                marginTop: "10px" 
-              }}>
-                Invoice has been sent to {email}
-              </p>
-            )}
-          </div>
-          
           {/* Print & Back Buttons */}
           <button 
             onClick={handlePrint}
@@ -585,9 +496,16 @@ const InvoicePage = () => {
               backgroundColor: "var(--primary-color)",
               color: "white",
               border: "none",
+              borderRadius: "4px",
               fontWeight: "500",
+              fontSize: "0.9rem",
               cursor: "pointer",
-              marginRight: "15px"
+              marginRight: "15px",
+              minWidth: "180px",
+              height: "46px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center"
             }}
           >
             PRINT INVOICE
@@ -595,12 +513,19 @@ const InvoicePage = () => {
           <Link 
             to="/orders"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               padding: "12px 25px",
               border: "1px solid var(--border-color)",
+              borderRadius: "4px",
+              backgroundColor: "transparent",
               color: "var(--primary-color)",
               textDecoration: "none",
-              fontWeight: "500"
+              fontWeight: "500",
+              fontSize: "0.9rem",
+              minWidth: "180px",
+              height: "46px"
             }}
           >
             BACK TO ORDERS

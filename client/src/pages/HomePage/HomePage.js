@@ -9,7 +9,7 @@ const HomePage = () => {
     const [featuredBooks, setFeaturedBooks] = useState([]);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [loading, setLoading] = useState(true);
-    
+
     useEffect(() => {
         async function fetchBooks() {
             try {
@@ -92,7 +92,7 @@ const HomePage = () => {
                         <p style={{ marginBottom: "2rem", color: "var(--light-text)" }}>
                             No books available at the moment. Check back soon or visit our products page.
                         </p>
-                        <Link 
+                        <Link
                             to="/products" 
                             style={{
                                 display: "inline-block",
@@ -182,33 +182,33 @@ const HomePage = () => {
                         <div style={{ 
                             width: "400px", 
                             height: "500px", 
-                            display: "flex",
-                            alignItems: "center",
+                                        display: "flex",
+                                        alignItems: "center",
                             justifyContent: "center"
                         }}>
-                            <img 
+                                    <img
                                 src={currentFeaturedBook.image} 
                                 alt={currentFeaturedBook.title} 
-                                style={{ 
-                                    maxWidth: "100%",
-                                    maxHeight: "100%",
+                                        style={{
+                                            maxWidth: "100%",
+                                            maxHeight: "100%",
                                     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.1)"
-                                }}
-                            />
-                        </div>
-                    </div>
-                    
+                                        }}
+                                    />
+                                </div>
+                </div>
+
                     {/* Right arrow navigation - only if we have more than 1 book */}
                     {featuredBooks.length > 1 && (
-                        <button 
+                    <button
                             onClick={nextSlide}
-                            style={{
+                        style={{
                                 position: "absolute",
                                 right: "20px",
                                 top: "50%",
                                 transform: "translateY(-50%)",
                                 background: "white",
-                                border: "none",
+                            border: "none",
                                 width: "40px",
                                 height: "40px",
                                 borderRadius: "50%",
@@ -218,10 +218,10 @@ const HomePage = () => {
                                 boxShadow: "0 0 10px rgba(0,0,0,0.1)",
                                 zIndex: 2,
                                 cursor: "pointer"
-                            }}
-                        >
+                        }}
+                    >
                             <FaArrowRight color="var(--primary-color)" />
-                        </button>
+                    </button>
                     )}
                     
                     {/* Pagination dots for hero slider - only if we have more than 1 book */}
@@ -235,20 +235,20 @@ const HomePage = () => {
                             gap: "8px"
                         }}>
                             {featuredBooks.map((_, index) => (
-                                <button 
+                    <button
                                     key={index}
                                     onClick={() => goToSlide(index)}
-                                    style={{ 
+                        style={{
                                         width: "10px", 
                                         height: "10px", 
                                         borderRadius: "50%", 
                                         background: currentSlide === index ? "var(--accent-color)" : "#ccc",
-                                        border: "none",
+                            border: "none",
                                         cursor: "pointer"
-                                    }}
+                        }}
                                 ></button>
                             ))}
-                        </div>
+                </div>
                     )}
                 </section>
             )}

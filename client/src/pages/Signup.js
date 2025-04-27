@@ -43,14 +43,14 @@ function Register() {
       
       <div className="container">
         <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
+        display: "flex",
+        justifyContent: "center",
           padding: "80px 0" 
         }}>
           <div style={{ 
             backgroundColor: "white", 
             padding: "40px", 
-            width: "100%", 
+          width: "100%",
             maxWidth: "500px"
           }}>
             <h1 style={{ 
@@ -99,7 +99,7 @@ function Register() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "12px 15px", 
                     border: "1px solid var(--border-color)", 
                     fontSize: "1rem",
@@ -130,7 +130,7 @@ function Register() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "12px 15px", 
                     border: "1px solid var(--border-color)", 
                     fontSize: "1rem",
@@ -160,7 +160,7 @@ function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "12px 15px", 
                     border: "1px solid var(--border-color)", 
                     fontSize: "1rem",
@@ -190,7 +190,7 @@ function Register() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "12px 15px", 
                     border: "1px solid var(--border-color)", 
                     fontSize: "1rem",
@@ -204,12 +204,12 @@ function Register() {
                   type="submit" 
                   className="btn btn-primary"
                   style={{ 
-                    width: "100%", 
+              width: "100%",
                     padding: "14px", 
                     backgroundColor: "var(--primary-color)", 
                     color: "white", 
-                    border: "none", 
-                    cursor: "pointer",
+              border: "none",
+              cursor: "pointer",
                     fontWeight: "500",
                     fontSize: "0.9rem"
                   }}
@@ -219,7 +219,7 @@ function Register() {
               </div>
 
               <div style={{ 
-                textAlign: "center", 
+              textAlign: "center",
                 color: "var(--light-text)",
                 fontSize: "0.9rem"
               }}>
@@ -228,7 +228,7 @@ function Register() {
                     to="/login" 
                     style={{ 
                       color: "var(--primary-color)", 
-                      textDecoration: "none",
+              textDecoration: "none",
                       fontWeight: "500"
                     }}
                   >
