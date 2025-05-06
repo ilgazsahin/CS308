@@ -32,6 +32,12 @@ const WishlistPage = () => {
         }}>
           My Wishlist
         </h1>
+        {wishlist.length === 0 ? (
+        <p style={{ textAlign: "center" }}>Your wishlist is empty.</p>
+        ) : (
+            
+        )}
+
       </div>
       <Footer />
     </div>
