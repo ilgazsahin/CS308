@@ -20,6 +20,17 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const wishlist = await Wishlist.find({ userId }).populate('bookId');
+    res.status(200).json(wishlist);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching wishlist', error: err });
+  }
+});
+
 
 
 module.exports = router;
