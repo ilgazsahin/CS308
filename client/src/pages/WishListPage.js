@@ -35,7 +35,67 @@ const WishlistPage = () => {
         {wishlist.length === 0 ? (
         <p style={{ textAlign: "center" }}>Your wishlist is empty.</p>
         ) : (
-            
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
+            gap: "30px" 
+          }}>
+            {wishlist.map(item => (
+              <div key={item._id} style={{ 
+                backgroundColor: "white", 
+                padding: "20px", 
+                borderRadius: "8px", 
+                textAlign: "center" 
+              }}>
+                <div style={{ 
+                  height: "250px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center", 
+                  marginBottom: "15px" 
+                }}>
+                  <img 
+                    src={item.bookId.image} 
+                    alt={item.bookId.title} 
+                    style={{ 
+                      maxHeight: "100%", 
+                      maxWidth: "100%", 
+                      objectFit: "contain", 
+                      borderRadius: "4px" 
+                    }} 
+                  />
+                </div>
+          
+                <h3 style={{ 
+                  margin: "10px 0", 
+                  color: "var(--primary-color)" 
+                }}>
+                  {item.bookId.title}
+                </h3>
+          
+                <p style={{ 
+                  color: "var(--accent-color)", 
+                  fontWeight: "500" 
+                }}>
+                  ${item.bookId.price.toFixed(2)}
+                </p>
+          
+                <Link to={`/book/${item.bookId._id}`}>
+                  <button style={{ 
+                    marginTop: "10px", 
+                    padding: "10px 20px", 
+                    backgroundColor: "var(--primary-color)", 
+                    color: "white", 
+                    border: "none", 
+                    cursor: "pointer" 
+                  }}>
+                    View Book
+                  </button>
+                </Link>
+              </div>
+            ))}
+          </div>
+          
         )}
 
       </div>
