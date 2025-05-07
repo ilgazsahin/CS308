@@ -14,6 +14,7 @@ const CommentController = require("./Controller/CommentController");
 const OrderController = require("./Controller/OrderController");
 const RatingController = require("./Controller/RatingController");
 const CartController = require("./Controller/CartController");
+const WishlistController = require("./Controller/wishListController");
 
 // Import the simplified email service
 const { sendSimpleOrderEmail } = require('./utils/simplifiedEmailService');
@@ -58,6 +59,7 @@ app.use("/api/comments", CommentController);
 app.use("/api/orders", OrderController);
 app.use("/api/ratings", RatingController);
 app.use("/api/carts", CartController);
+app.use('/api/wishlist', WishlistController);
 
 // Simple test route for emails
 app.post('/test-email', async (req, res) => {
