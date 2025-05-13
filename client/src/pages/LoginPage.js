@@ -32,7 +32,8 @@ function Login() {
 
           // Store userName
           localStorage.setItem("userName", result.data.user.name);
-      
+          localStorage.setItem("userEmail", result.data.user.email); 
+
         // Handle cart merging
         await handleLogin(userId);
     
