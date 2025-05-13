@@ -31,7 +31,9 @@ const BookDetail = () => {
     const [newRating, setNewRating] = useState(0);
     const [hasExistingComment, setHasExistingComment] = useState(false);
     const [hasExistingRating, setHasExistingRating] = useState(false);
+    const [inWishlist, setInWishlist] = useState(false);
 
+    
     // Fetch the book details on mount/update
     useEffect(() => {
         const fetchBookDetail = async () => {
@@ -130,7 +132,22 @@ const BookDetail = () => {
         
         checkPurchaseStatus();
     }, [id]);
-
+    useEffect(() => {
+        const checkWishlist = async () => {
+          const userId = localStorage.getItem("userId");
+          if (!userId || !book?._id) return;
+          try {
+            const response = await axios.get(`http://localhost:3001/api/wishlist/${userId}`);
+            const isInWishlist = response.data.some(item => item.bookId._id === book._id);
+            setInWishlist(isInWishlist);
+          } catch (error) {
+            console.error("Error checking wishlist:", error);
+          }
+        };
+      
+        checkWishlist();
+      }, [book]);
+      
     // Add this useEffect to fetch ratings
     useEffect(() => {
         const fetchRatings = async () => {
@@ -194,7 +211,8 @@ const BookDetail = () => {
             </div>
         </div>
     );
-
+    
+    
     // Update the handleReviewSubmit function
     const handleReviewSubmit = async (e) => {
         e.preventDefault();
@@ -363,7 +381,36 @@ const BookDetail = () => {
             );
         }
     };
-
+    const handleAddToWishlist = async () => {
+        const userId = localStorage.getItem("userId");
+        if (!userId || !book?._id) {
+          alert("Please login to manage wishlist.");
+          return;
+        }
+      
+        try {
+          if (inWishlist) {
+            // Remove from wishlist
+            await axios.delete(`http://localhost:3001/api/wishlist/${userId}/${book._id}`);
+            alert("Removed from wishlist.");
+            setInWishlist(false);
+          } else {
+            // Add to wishlist
+            await axios.post("http://localhost:3001/api/wishlist", {
+              userId,
+              bookId: book._id
+            });
+            alert("Added to wishlist!");
+            setInWishlist(true);
+          }
+        } catch (err) {
+          console.error("Wishlist operation failed", err);
+          alert("Failed to update wishlist.");
+        }
+      };
+      
+      
+      
     // Only show the review form if there's an orderId in the URL
     const showReviewForm = !!searchParams.get('orderId');
 
@@ -505,15 +552,22 @@ const BookDetail = () => {
                                 ) : !book.stock || book.stock <= 0 ? "OUT OF STOCK" : "ADD TO CART"}
                             </button>
                             
-                            <button className="btn" style={{
+                            <button
+                            onClick={handleAddToWishlist}
+                            className="btn"
+                            style={{
                                 padding: "12px 25px",
                                 border: "1px solid var(--border-color)",
                                 backgroundColor: "transparent",
-                                color: "var(--primary-color)",
+                                color: inWishlist ? "#d32f2f" : "var(--primary-color)",
                                 cursor: "pointer",
                                 fontWeight: "500",
                                 fontSize: "0.9rem"
-                            }}>ADD TO WISHLIST</button>
+                            }}
+                            >
+                            {inWishlist ? "REMOVE FROM WISHLIST" : "ADD TO WISHLIST"}
+                            </button>
+
                     </div>
                 </div>
             </div>
