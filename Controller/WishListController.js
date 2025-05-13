@@ -31,12 +31,18 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+// Express.js Router
+router.delete('/:userId/:bookId', async (req, res) => {
+  const { userId, bookId } = req.params;
   try {
-    await Wishlist.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: 'Removed from wishlist' });
+    const deleted = await Wishlist.findOneAndDelete({ userId, bookId });
+    if (deleted) {
+      return res.status(200).json({ message: 'Removed from wishlist' });
+    } else {
+      return res.status(404).json({ message: 'Item not found in wishlist' });
+    }
   } catch (err) {
-    res.status(500).json({ message: 'Error removing from wishlist', error: err });
+    return res.status(500).json({ message: 'Error removing from wishlist' });
   }
 });
 
