@@ -47,6 +47,10 @@ const Navigation = () => {
                     <Route path="/admin" element={<Dashboard />} />
                     <Route path="/admin/stock" element={<StockManagement />} />
                     <Route path="/admin/manage-orders" element={<ManageOrders />} />
+                    {/* Wish List */}
+                    <Route path="/wishlist" element={<WishlistPage />} />
+                    {/* User Profile */}
+                    <Route path="/profile" element={<ProfilePage />} />
                 </Routes>
             </CartProvider>
         </Router>
