@@ -1,7 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const BookModel = require("../Models/BookModel");
+const WishlistModel = require("../Models/WishListModel");
+const UserModel = require("../Models/UserModel");
 
+const { sendDiscountNotification } = require("../utils/emailService");
+  
 // Get All Categories - Moving this route before the ID route to avoid path conflicts
 router.get("/categories", async (req, res) => {
     try {
@@ -94,7 +98,29 @@ router.patch("/:id/stock", async (req, res) => {
         res.status(500).json({ message: "Error updating stock", error: err.message });
     }
 });
-
+// Update book price (sales manager)
+router.patch("/:id/price", async (req, res) => {
+    try {
+      const { price } = req.body;
+  
+      if (price === undefined || isNaN(price)) {
+        return res.status(400).json({ message: "Invalid price value" });
+      }
+  
+      const book = await BookModel.findById(req.params.id);
+      if (!book) {
+        return res.status(404).json({ message: "Book not found" });
+      }
+  
+      book.price = Number(price);
+      await book.save();
+  
+      res.json({ message: "Price updated successfully", book });
+    } catch (err) {
+      res.status(500).json({ message: "Error updating price", error: err.message });
+    }
+  });
+  
 // Decrease stock when items are purchased
 router.post("/decrease-stock", async (req, res) => {
     try {
@@ -158,4 +184,96 @@ router.post("/decrease-stock", async (req, res) => {
     }
 });
 
+
+// Apply discount to selected books
+router.patch("/discount", async (req, res) => {
+    try {
+      const { bookIds, discountRate } = req.body;
+  
+      if (!Array.isArray(bookIds) || typeof discountRate !== "number") {
+        return res.status(400).json({ message: "Invalid input data" });
+      }
+  
+      const updates = [];
+  
+      for (const id of bookIds) {
+        const book = await BookModel.findById(id);
+        if (!book) continue;
+  
+        const originalPrice = book.price;
+        const newPrice = Number((originalPrice * (1 - discountRate / 100)).toFixed(2));
+        book.price = newPrice;
+        await book.save();
+  
+        updates.push({ id, title: book.title, originalPrice, newPrice });
+      }
+  
+      // Yanıtı hemen gönder
+      res.json({ message: "Discount applied successfully", updates });
+  
+      // E-postaları arkada gönder
+      (async () => {
+        try {
+          const wishlistEntries = await WishlistModel.find({
+            bookId: { $in: bookIds }
+          }).populate("userId").populate("bookId");
+  
+          for (const entry of wishlistEntries) {
+            if (entry.userId?.email && entry.bookId?.title && entry.bookId?.price) {
+              await sendDiscountNotification({
+                to: entry.userId.email,
+                name: entry.userId.name,
+                title: entry.bookId.title,
+                newPrice: entry.bookId.price
+              });
+            }
+          }
+        } catch (emailError) {
+          console.error("Error sending discount emails:", emailError);
+        }
+      })();
+  
+    } catch (err) {
+      console.error("Error applying discount:", err);
+      res.status(500).json({ message: "Server error", error: err.message });
+    }
+});
+// DELETE /api/books/:id
+router.delete("/:id", async (req, res) => {
+    try {
+      const deleted = await BookModel.findByIdAndDelete(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Book not found" });
+      }
+      res.json({ message: "Book deleted successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Error deleting book", error: err.message });
+    }
+  });
+
+router.post("/categories", async (req, res) => {
+  const { name } = req.body;
+  try {
+    const exists = await CategoryModel.findOne({ name });
+    if (exists) return res.status(400).json({ message: "Category already exists" });
+
+    const newCategory = new CategoryModel({ name });
+    await newCategory.save();
+    res.status(201).json(newCategory);
+  } catch (err) {
+    res.status(500).json({ message: "Error adding category", error: err.message });
+  }
+});
+  
+// DELETE /api/categories/:name
+router.delete("/categories/:name", async (req, res) => {
+    try {
+      const result = await CategoryModel.findOneAndDelete({ name: req.params.name });
+      if (!result) return res.status(404).json({ message: "Category not found" });
+      res.json({ message: "Category deleted successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Error deleting category", error: err.message });
+    }
+  });
+  
 module.exports = router;
