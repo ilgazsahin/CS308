@@ -15,6 +15,9 @@ const OrderController = require("./Controller/OrderController");
 const RatingController = require("./Controller/RatingController");
 const CartController = require("./Controller/CartController");
 const WishlistController = require("./Controller/wishListController");
+const RefundController = require('./Controller/RefundController');
+const CategoryController = require('./Controller/CategoryController');
+const InvoiceController = require('./Controller/InvoiceController');
 
 // Import the simplified email service
 const { sendSimpleOrderEmail } = require('./utils/simplifiedEmailService');
@@ -26,7 +29,7 @@ const JWT_SECRET = process.env.JWT_SECRET;   // now read from .env
 /* ---------- Middleware ---------- */
 app.use(express.json());
 app.use(cors());
-
+app.use('/api/refund-requests', RefundController);
 /* ---------- MongoDB Connection ---------- */
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
@@ -35,13 +38,14 @@ mongoose.connect(process.env.MONGODB_URI, {
   .then(() => console.log('🗄️  MongoDB connection successful'))
   .catch(err => console.error(' MongoDB connection error:', err));
 
+
 /* ---------- Ensure Collections Exist ---------- */
 mongoose.connection.once('open', async () => {
   const db         = mongoose.connection.db;
   const collections = await db.listCollections().toArray();
   const names       = collections.map(c => c.name);
 
-  const needed = ['books', 'users', 'comments', 'ratings', 'orders', 'carts'];
+  const needed = ['books', 'users', 'comments', 'ratings', 'orders', 'carts','invoices'];
   for (const name of needed) {
     if (!names.includes(name)) {
       await db.createCollection(name);
@@ -60,6 +64,9 @@ app.use("/api/orders", OrderController);
 app.use("/api/ratings", RatingController);
 app.use("/api/carts", CartController);
 app.use('/api/wishlist', WishlistController);
+app.use("/api/refunds", RefundController);
+app.use('/api/categories', CategoryController);
+app.use('/api/invoices', InvoiceController);
 
 // Simple test route for emails
 app.post('/test-email', async (req, res) => {
