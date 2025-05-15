@@ -121,7 +121,7 @@ function InvoiceViewPage() {
                                         </td>
                                         <td>
                                             <button 
-                                                onClick={() => window.open(/admin/detailinvoice/${inv.invoiceId}, "_blank")}
+                                                onClick={() => window.open('/admin/detailinvoice/${inv.invoiceId}', "_blank")}
                                                 style={{ padding: "4px 8px" }}
                                             >
                                                 View
