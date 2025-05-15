@@ -78,6 +78,58 @@ const sendOrderConfirmation = async (orderData, recipientEmail) => {
   }
 };
 
+const sendRefundNotification = async (refundData, recipientEmail, recipientName) => {
+  const { refundedAmount, status } = refundData;
+
+  const mailOptions = {
+    from: '"Store 26" <store26.noreply@gmail.com>',
+    to: recipientEmail,
+    subject: "Refund Status Update",
+    html: `
+      <h3>Hello ${recipientName},</h3>
+      <p>Your refund request has been <strong>${status}</strong>.</p>
+      ${
+        status === "approved"
+          ? `<p>The refunded amount is: <strong>$${refundedAmount.toFixed(2)}</strong></p>`
+          : ""
+      }
+      <p>Thank you for shopping with us.</p>
+      <hr />
+      <p style="font-size: 0.9em; color: #888;">This is an automated message. Please do not reply.</p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Refund email sent to ${recipientEmail}`);
+  } catch (err) {
+    console.error("Failed to send refund email:", err);
+  }
+};
+const sendDiscountNotification = async ({ to, name, title, newPrice }) => {
+  try {
+    await transporter.sendMail({
+      from: 'store26order@gmail.com',
+      to,
+      subject: 'Great News! A Book in Your Wishlist is Now Discounted!',
+      html: `
+        <p>Dear ${name},</p>
+        <p>We're excited to inform you that a book in your wishlist is now discounted!</p>
+        <p><strong>${title}</strong> is now only <strong>$${newPrice.toFixed(2)}</strong>.</p>
+        <p><a href="http://localhost:3000/book">Check it out now!</a></p>
+        <p>Happy reading!</p>
+        <hr>
+        <p>This is an automated message from Store26.</p>
+      `
+    });
+    console.log(`Discount notification sent to ${to}`);
+  } catch (err) {
+    console.error("Error sending discount email:", err);
+  }
+};
+
 module.exports = {
-  sendOrderConfirmation
+  sendOrderConfirmation,
+  sendDiscountNotification,
+  sendRefundNotification
 }; 
