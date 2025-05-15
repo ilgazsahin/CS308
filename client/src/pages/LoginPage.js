@@ -27,20 +27,21 @@ function Login() {
           localStorage.setItem("token", result.data.token);
       
         // Store the userId
-        const userId = result.data.user.id || result.data.user._id;
-        localStorage.setItem("userId", userId);
+          const userId = result.data.user.id || result.data.user._id;
+          localStorage.setItem("userId", userId);
 
-          // Store userName
+            // Store userName
           localStorage.setItem("userName", result.data.user.name);
           localStorage.setItem("userEmail", result.data.user.email); 
+          localStorage.setItem("role", result.data.user.role); 
+          // Handle cart merging
+          await handleLogin(userId);
+          console.log("Login yanıtı:", result.data);
 
-        // Handle cart merging
-        await handleLogin(userId);
-    
-        // Navigate to Home or redirect to original destination
-        const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/home';
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
+          // Navigate to Home or redirect to original destination
+          const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/home';
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
         } else {
           setErrorMessage("Invalid credentials or unexpected response!");
         }
