@@ -9,14 +9,15 @@ function InvoiceViewPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
+
     useEffect(() => {
         const role = localStorage.getItem("role");
-    
+
         if (role !== "product manager" && role !== "sales manager") {
             navigate("/unauthorized");
             return;
         }
-    
+
         const fetchUsers = async () => {
             try {
                 setLoading(true);
@@ -30,12 +31,13 @@ function InvoiceViewPage() {
                 setLoading(false);
             }
         };
-    
+
         fetchUsers();
     }, [navigate]);
+
     const fetchInvoices = async () => {
         if (!selectedUserId) return;
-    
+
         try {
             setLoading(true);
             setError(null);
@@ -49,6 +51,7 @@ function InvoiceViewPage() {
             setLoading(false);
         }
     };
+
     return (
         <div style={{ padding: "2rem" }}>
             <h2>Invoice Viewer</h2>
@@ -121,7 +124,7 @@ function InvoiceViewPage() {
                                         </td>
                                         <td>
                                             <button 
-                                                onClick={() => window.open('/admin/detailinvoice/${inv.invoiceId}', "_blank")}
+                                                onClick={() => window.open(`/admin/detailinvoice/${inv.invoiceId}`, "_blank")}
                                                 style={{ padding: "4px 8px" }}
                                             >
                                                 View
@@ -144,7 +147,7 @@ function InvoiceViewPage() {
                 )}
             </div>
         </div>
-    );    
+    );
 }
 
 export default InvoiceViewPage;
