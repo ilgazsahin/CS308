@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Wishlist = require('../Models/WishListModel');
+const UserModel = require('../Models/UserModel')
 
 router.post('/', async (req, res) => {
   const { userId, bookId } = req.body;
