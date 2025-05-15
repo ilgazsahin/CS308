@@ -12,7 +12,7 @@ const CategorySidebar = ({ isOpen, onClose }) => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:3001/api/books/categories');
+        const response = await axios.get('http://localhost:3001/api/categories');
         setCategories(response.data);
       } catch (error) {
         console.error('Error fetching categories:', error);
