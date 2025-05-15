@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaSearch, FaShoppingCart, FaSpinner, FaBars, FaTimes } from "react-icons/fa";
 import { useCart } from "../../components/CartContext";
 import CategorySidebar from "../../components/CategorySidebar";
+const role = localStorage.getItem("role");
 
 const NavigationBar = () => {
     const navigate = useNavigate();
@@ -161,7 +162,60 @@ const NavigationBar = () => {
                                             >
                                                 Order History
                                             </Link>
+                                            <Link
+                                                to="/profile"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Profile
+                                            </Link>
+
+                                            <Link
+                                                to="/wishlist"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Wishlist
+                                            </Link>
+
                                             <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            {role === "product manager" && (
+                                            <Link
+                                            to="/admin"
+                                            onClick={() => setIsOpen(false)}
+                                            style={{
+                                                textDecoration: "none",
+                                                color: "var(--primary-color)",
+                                                padding: "5px 0"
+                                            }}
+                                            >
+                                                 Product Manager
+                                             </Link>
+                                            )}
+                                            {role === "sales manager" && (
+                                            <Link
+                                            to="/sales-manager"
+                                            onClick={() => setIsOpen(false)}
+                                            style={{
+                                                textDecoration: "none",
+                                                color: "var(--primary-color)",
+                                                padding: "5px 0"
+                                            }}
+                                            >
+                                                 Sales Manager
+                                             </Link>
+                                            )}
+
+
+                                            
                                     <button
                                         onClick={() => {
                                             handleLogout();
