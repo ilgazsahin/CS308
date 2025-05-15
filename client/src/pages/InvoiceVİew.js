@@ -33,7 +33,23 @@ function InvoiceViewPage() {
     
         fetchUsers();
     }, [navigate]);
+    const fetchInvoices = async () => {
+        if (!selectedUserId) return;
     
+        try {
+            setLoading(true);
+            setError(null);
+            const res = await axios.get(`http://localhost:3001/api/invoices/user/${selectedUserId}`);
+            setInvoices(res.data);
+        } catch (err) {
+            console.error("Error fetching invoices:", err);
+            setError("Failed to load invoices. Please try again later.");
+            setInvoices([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+        
 }
 
 export default InvoiceViewPage;
