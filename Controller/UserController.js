@@ -4,32 +4,44 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const UserModel = require("../Models/UserModel");
 
-const JWT_SECRET = 'your_jwt_secret_key'; // Consider storing this in an environment variable
+const JWT_SECRET = 'your_jwt_secret_key'; 
 
-// Login Endpoint
 router.post("/login", async (req, res) => {
     const { email, password } = req.body;
+    
     try {
         const user = await UserModel.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
-        const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+
+        const token = jwt.sign(
+            { id: user._id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
         res.json({
             message: "Login successful",
             token,
-            user: { id: user._id, email: user.email, name: user.name }
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
         });
     } catch (err) {
         res.status(500).json({ message: "Server error", error: err });
     }
 });
 
-// Register Endpoint
+
 router.post("/register", async (req, res) => {
     const { email, name, password } = req.body;
     try {
@@ -49,4 +61,13 @@ router.post("/register", async (req, res) => {
     }
 });
 
+router.get("/", async (req, res) => {
+    try {
+      const users = await UserModel.find({}, "_id name email");
+      res.json(users);
+    } catch (err) {
+      res.status(500).json({ message: "Error fetching users", error: err.message });
+    }
+  });
+  
 module.exports = router;
