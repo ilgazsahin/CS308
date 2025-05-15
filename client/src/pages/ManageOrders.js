@@ -1,21 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// Allowed status transitions
 const STATUS_OPTIONS = ["processing", "in-transit", "delivered"];
 
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    const role = localStorage.getItem("role");
+    if (role !== "product manager") {
+      navigate("/unauthorized"); 
+      return;
+    }
 
-  /**
-   * Fetch all orders from the backend (admin‑only endpoint)
-   */
+    fetchOrders();
+  }, [navigate]);
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -30,11 +34,7 @@ const ManageOrders = () => {
     }
   };
 
-  /**
-   * Handle dropdown change ➜ send PATCH /:orderId/status
-   */
   const handleStatusChange = async (orderId, newStatus) => {
-    // optimistic UI update
     setOrders(prev =>
       prev.map(o => (o.orderId === orderId ? { ...o, status: newStatus } : o))
     );
@@ -47,7 +47,6 @@ const ManageOrders = () => {
     } catch (err) {
       console.error("Error updating status:", err);
       setError("Failed to update order status. Reverting …");
-      // rollback
       fetchOrders();
     }
   };
