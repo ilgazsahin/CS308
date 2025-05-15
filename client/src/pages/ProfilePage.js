@@ -7,13 +7,13 @@ const ProfilePage = () => {
     name: '',
     email: '',
     address: '',
-}
+  });
 
- useEffect(() => {
+  useEffect(() => {
     const name = localStorage.getItem('userName') || '';
     const email = localStorage.getItem('userEmail') || '';
 
-    setUserData({ name, email });
+    setUserData({ name, email});
   }, []);
 
   return (
@@ -30,8 +30,8 @@ const ProfilePage = () => {
         }}>
           My Profile
         </h1>
-      </div>
-      <div style={{
+
+        <div style={{
           backgroundColor: "white",
           padding: "30px",
           maxWidth: "600px",
@@ -43,7 +43,8 @@ const ProfilePage = () => {
           <p><strong>Email:</strong> {userData.email || "Not Available"}</p>
           <p><strong>Delivery Address:</strong> {userData.address || "Not Provided"}</p>
         </div>
-  
+      </div>
+
       <Footer />
     </div>
   );
