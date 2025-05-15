@@ -46,7 +46,6 @@ const OrderHistory = () => {
     fetchOrders();
   }, [navigate]);
 
-  // Helper function to format date
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -229,7 +228,26 @@ const OrderHistory = () => {
                         >
                           Leave Review
                         </Link>
+                        
                       )}
+                      {order.status.toLowerCase() === "delivered" && (
+                      <button
+                        onClick={() => navigate(`/refund-request/${order._id}`)}
+                        style={{
+                          padding: "8px 15px",
+                          backgroundColor: "#ff5555",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "0.9rem",
+                          marginLeft: "10px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Refund Request
+                      </button>
+                    )}
+
                     </div>
                   ))}
                 </div>
