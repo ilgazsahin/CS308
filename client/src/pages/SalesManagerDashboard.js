@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
-import { FaShoppingBag, FaExclamationTriangle, FaChartBar, FaSearch, FaBook, FaPercent, FaTags, FaMoneyBillWave, FaUsers, FaFileInvoiceDollar, FaCalendarAlt } from "react-icons/fa";
+import { FaShoppingBag, FaExclamationTriangle, FaChartBar, FaSearch, FaBook, FaPercent, FaTags, FaMoneyBillWave, FaUsers, FaFileInvoiceDollar, FaCalendarAlt, FaPrint, FaFilePdf } from "react-icons/fa";
 import axios from "axios";
+import { useReactToPrint } from 'react-to-print';
+import PrintableInvoice from "../components/PrintableInvoice";
 
 const SalesManagerDashboard = () => {
   const navigate = useNavigate();
@@ -33,6 +35,13 @@ const SalesManagerDashboard = () => {
   // Add state for date range filtering
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  
+  // Create refs for each invoice for printing
+  const invoicePrintRefs = useRef({});
+  
+  // Track which invoice is being printed
+  const [printingInvoice, setPrintingInvoice] = useState(null);
+  const printRef = useRef(null);
   
   // Check if user is authorized
   useEffect(() => {
@@ -360,6 +369,23 @@ const SalesManagerDashboard = () => {
   useEffect(() => {
     handleFilterOrdersByDate();
   }, [startDate, endDate, orders]);
+
+  // Handle printing of specific invoice
+  const handlePrintInvoice = (order) => {
+    setPrintingInvoice(order);
+    
+    setTimeout(() => {
+      if (printRef.current) {
+        const handlePrint = useReactToPrint({
+          content: () => printRef.current,
+          documentTitle: `Invoice-${order._id.substring(order._id.length - 6)}`,
+          onAfterPrint: () => setPrintingInvoice(null),
+        });
+        
+        handlePrint();
+      }
+    }, 100);
+  };
 
   return (
     <div style={{ backgroundColor: "var(--light-bg)", minHeight: "100vh" }}>
@@ -1037,7 +1063,7 @@ const SalesManagerDashboard = () => {
                           })}
                         </p>
                       </div>
-                      <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <span style={{
                           display: "inline-block",
                           padding: "6px 12px",
@@ -1050,6 +1076,27 @@ const SalesManagerDashboard = () => {
                         }}>
                           {order.status}
                         </span>
+                        
+                        {/* Add Print/PDF Button */}
+                        <button
+                          onClick={() => handlePrintInvoice(order)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "6px 12px",
+                            backgroundColor: "#4caf50",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "0.8rem"
+                          }}
+                          title="Print or save as PDF"
+                        >
+                          <FaPrint size={14} />
+                          Print/PDF
+                        </button>
                       </div>
                     </div>
                     
@@ -1166,7 +1213,50 @@ const SalesManagerDashboard = () => {
         )}
       </div>
       
+      {/* Printable Invoice Component (hidden until needed) */}
+      <div style={{ display: 'none' }}>
+        {printingInvoice && (
+          <PrintableInvoice 
+            ref={printRef}
+            order={printingInvoice}
+          />
+        )}
+      </div>
+      
       <Footer />
+      
+      {/* Add print styles */}
+      <style>
+        {`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .container *:not(.printable-content *) {
+              visibility: hidden;
+            }
+            .printable-content, .printable-content * {
+              visibility: visible !important;
+            }
+            .printable-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 20px;
+            }
+            .print-only {
+              display: block !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            nav, footer, button {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };
