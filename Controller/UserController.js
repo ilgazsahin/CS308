@@ -165,4 +165,19 @@ router.put("/:id", async (req, res) => {
     }
 });
 
+// Get a single user by ID
+router.get("/:id", async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.params.id).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ message: "Error retrieving user", error: err.message });
+    }
+});
+
 module.exports = router;

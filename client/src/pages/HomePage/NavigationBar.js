@@ -151,6 +151,18 @@ const NavigationBar = () => {
                                             <p style={{ margin: 0, fontWeight: "500" }}>Hello, {userName || "User"}</p>
                                             <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
                                             <Link
+                                                to="/profile"
+                                                onClick={() => setIsOpen(false)}
+                                                style={{
+                                                    textDecoration: "none",
+                                                    color: "var(--primary-color)",
+                                                    padding: "5px 0"
+                                                }}
+                                            >
+                                                Profile
+                                            </Link>
+                                            <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            <Link
                                                 to="/orders"
                                                 onClick={() => setIsOpen(false)}
                                         style={{

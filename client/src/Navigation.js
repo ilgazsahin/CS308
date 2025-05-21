@@ -13,6 +13,7 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderHistory from "./pages/OrderHistory";
 import InvoicePage from "./pages/InvoicePage";
+import ProfilePage from "./pages/ProfilePage"; // Import the new ProfilePage
 import StockManagement from "./pages/StockManagement"; // Import the new StockManagement page
 import { CartProvider } from './components/CartContext';
 import ManageOrders from './pages/ManageOrders';
@@ -29,6 +30,7 @@ const Navigation = () => {
                     {/* Auth Routes */}
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<Signup />} />
+                    <Route path="/profile" element={<ProfilePage />} />
 
                     {/* Book-related Routes */}
                     <Route path="/addbook" element={<AddBook />} />
