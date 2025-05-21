@@ -26,6 +26,9 @@ const ProfilePage = () => {
         const token = localStorage.getItem("token");
         const userId = localStorage.getItem("userId");
         
+        console.log("Token:", token ? "exists" : "missing");
+        console.log("User ID:", userId || "missing");
+        
         if (!token || !userId) {
             navigate("/login");
             return;
@@ -34,12 +37,15 @@ const ProfilePage = () => {
         const fetchUserData = async () => {
             try {
                 setLoading(true);
+                console.log("Fetching user data from:", `http://localhost:3001/api/users/${userId}`);
+                
                 const response = await axios.get(`http://localhost:3001/api/users/${userId}`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
                 });
                 
+                console.log("User data response:", response.data);
                 setUser(response.data);
                 setFormData({
                     name: response.data.name || "",
@@ -47,6 +53,10 @@ const ProfilePage = () => {
                 });
             } catch (err) {
                 console.error("Error fetching user data:", err);
+                if (err.response) {
+                    console.error("Response status:", err.response.status);
+                    console.error("Response data:", err.response.data);
+                }
                 setError("Failed to load profile information. Please try again later.");
             } finally {
                 setLoading(false);
