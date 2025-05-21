@@ -1,8 +1,11 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { FaSearch, FaShoppingCart, FaSpinner, FaBars, FaTimes } from "react-icons/fa";
+import { FaSearch, FaShoppingCart, FaSpinner, FaBars, FaTimes, FaStar, FaTachometerAlt } from "react-icons/fa";
 import { useCart } from "../../components/CartContext";
+import { useWishlist } from "../../components/WishlistContext";
 import CategorySidebar from "../../components/CategorySidebar";
+import axios from "axios";
+import { hasRole, getUserRole } from "../../utils/userUtils";
 
 const NavigationBar = () => {
     const navigate = useNavigate();
@@ -11,8 +14,65 @@ const NavigationBar = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
     const userName = localStorage.getItem("userName");
-    const { cartCount, cartTotal, isLoading } = useCart();
+    const [userType, setUserType] = useState("");
+    const [showProductDashboard, setShowProductDashboard] = useState(false);
+    const [showSalesDashboard, setShowSalesDashboard] = useState(false);
+    
+    // Add guard clauses for hooks
+    const cart = useCart() || {};
+    const { cartCount = 0, cartTotal = 0, isLoading = false } = cart;
+    
+    const wishlist = useWishlist() || {};
+    const { wishlistCount = 0 } = wishlist;
+    
+    // Direct check for user roles
+    const checkRoles = useCallback(async () => {
+        if (!token || !userId) return;
+        
+        try {
+            console.log("Checking user roles for userId:", userId);
+            
+            // Get user data directly
+            const response = await axios.get(`http://localhost:3001/api/users/${userId}`);
+            const userTypeValue = response.data.userType || "";
+            console.log("User type from API:", userTypeValue);
+            
+            // Set user type state
+            setUserType(userTypeValue);
+            
+            // Store in localStorage for future quick access
+            localStorage.setItem("userType", userTypeValue);
+            
+            // Check explicit roles
+            const productAccess = userTypeValue === "product" || 
+                                 userTypeValue.includes("product");
+            
+            const salesAccess = userTypeValue === "sales" || 
+                               userTypeValue.includes("sales");
+            
+            console.log("Product dashboard access:", productAccess);
+            console.log("Sales dashboard access:", salesAccess);
+            
+            setShowProductDashboard(productAccess);
+            setShowSalesDashboard(salesAccess);
+        } catch (error) {
+            console.error("Error checking roles:", error);
+        }
+    }, [userId, token]);
+    
+    // Check roles when dropdown opens or component mounts
+    useEffect(() => {
+        if (isOpen) {
+            checkRoles();
+        }
+    }, [isOpen, checkRoles]);
+    
+    // Also check on initial mount
+    useEffect(() => {
+        checkRoles();
+    }, [checkRoles]);
     
     // Extract search query from URL on component mount
     useEffect(() => {
@@ -86,6 +146,10 @@ const NavigationBar = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
         localStorage.removeItem("userName");
+        localStorage.removeItem("userType");
+        setUserType("");
+        setShowProductDashboard(false);
+        setShowSalesDashboard(false);
         navigate("/home"); // Redirect to home as a guest
     };
 
@@ -95,6 +159,11 @@ const NavigationBar = () => {
             navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
         }
     };
+
+    // Log user type and condition checks for debugging
+    console.log("Current userType:", userType);
+    console.log("Show product dashboard:", showProductDashboard);
+    console.log("Show sales dashboard:", showSalesDashboard);
 
     return (
         <div>
@@ -139,7 +208,7 @@ const NavigationBar = () => {
                                     border: "1px solid var(--border-color)",
                                     boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
                                     padding: "15px",
-                                    width: "200px",
+                                    width: "230px",
                                     zIndex: 1000
                                 }}>
                             {token ? (
@@ -162,6 +231,51 @@ const NavigationBar = () => {
                                                 Profile
                                             </Link>
                                             <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                            
+                                            {/* Show Product Manager Dashboard link */}
+                                            {showProductDashboard && (
+                                                <>
+                                                    <Link
+                                                        to="/product-manager"
+                                                        onClick={() => setIsOpen(false)}
+                                                        style={{
+                                                            textDecoration: "none",
+                                                            color: "var(--primary-color)",
+                                                            padding: "5px 0",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: "8px"
+                                                        }}
+                                                    >
+                                                        <FaTachometerAlt size={14} />
+                                                        Product Manager Dashboard
+                                                    </Link>
+                                                    <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                                </>
+                                            )}
+                                            
+                                            {/* Show Sales Manager Dashboard link */}
+                                            {showSalesDashboard && (
+                                                <>
+                                                    <Link
+                                                        to="/sales-manager"
+                                                        onClick={() => setIsOpen(false)}
+                                                        style={{
+                                                            textDecoration: "none",
+                                                            color: "var(--primary-color)",
+                                                            padding: "5px 0",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: "8px"
+                                                        }}
+                                                    >
+                                                        <FaTachometerAlt size={14} />
+                                                        Sales Manager Dashboard
+                                                    </Link>
+                                                    <hr style={{ margin: "5px 0", border: "none", borderTop: "1px solid var(--border-color)" }} />
+                                                </>
+                                            )}
+                                            
                                             <Link
                                                 to="/orders"
                                                 onClick={() => setIsOpen(false)}
@@ -225,6 +339,19 @@ const NavigationBar = () => {
                         </div>
                     )}
                         </div>
+                        
+                        <Link to="/wishlist" style={{ 
+                            textDecoration: "none", 
+                            color: "var(--primary-color)",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            marginRight: "20px"
+                        }}>
+                            <FaStar />
+                            WISHLIST ({wishlistCount})
+                        </Link>
                         
                         <Link to="/cart" style={{ 
                             textDecoration: "none", 

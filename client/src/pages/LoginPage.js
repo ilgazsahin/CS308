@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import React from "react";
@@ -11,8 +11,28 @@ function Login() {
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
   const navigate = useNavigate();
   const { handleLogin } = useCart();
+
+  // Check if user is already logged in on component mount
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const userId = localStorage.getItem("userId");
+      const token = localStorage.getItem("token");
+      
+      if (userId && token) {
+        try {
+          const response = await axios.get(`http://localhost:3001/api/users/${userId}`);
+          setUserInfo(response.data);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
+      }
+    };
+    
+    checkLoginStatus();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +41,9 @@ function Login() {
 
     try {
       const result = await axios.post("http://localhost:3001/api/users/login", { email, password });
+      
+      console.log("Login response:", result.data);
+      console.log("User type from login:", result.data.user.userType);
       
         if (result.data && result.data.message === "Login successful") {
           // Store the token
@@ -32,9 +55,18 @@ function Login() {
 
           // Store userName
           localStorage.setItem("userName", result.data.user.name);
+          
+          // Store userType
+          localStorage.setItem("userType", result.data.user.userType || "");
+          
+          console.log("Saved to localStorage - userId:", userId);
+          console.log("Saved to localStorage - userType:", result.data.user.userType || "");
       
         // Handle cart merging
         await handleLogin(userId);
+        
+        // Update user info state
+        setUserInfo(result.data.user);
     
         // Navigate to Home or redirect to original destination
         const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/home';
@@ -52,6 +84,20 @@ function Login() {
         }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Check role access
+  const checkAccess = async (role) => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    
+    try {
+      const response = await axios.get(`http://localhost:3001/api/users/check-role/${userId}?role=${role}`);
+      alert(`Access to ${role} role: ${response.data.hasRole ? 'YES' : 'NO'}\nUser type: ${response.data.userType}`);
+    } catch (error) {
+      console.error("Error checking access:", error);
+      alert(`Error checking access to ${role} role`);
     }
   };
 
@@ -91,6 +137,186 @@ function Login() {
                 fontSize: "0.9rem"
               }}>
                 {errorMessage}
+              </div>
+            )}
+
+            {/* Show user info if logged in */}
+            {userInfo && (
+              <div style={{
+                backgroundColor: "#e8f5e9",
+                padding: "15px",
+                borderRadius: "4px",
+                marginBottom: "20px"
+              }}>
+                <p><strong>Logged in as:</strong> {userInfo.name}</p>
+                <p style={{ 
+                  fontSize: "1.1rem", 
+                  padding: "5px 0",
+                  backgroundColor: "#4caf50",
+                  color: "white",
+                  textAlign: "center",
+                  marginBottom: "10px",
+                  borderRadius: "4px"
+                }}>
+                  <strong>User Type:</strong> {userInfo.userType || "Not set"}
+                </p>
+                
+                <div style={{ marginTop: "10px", marginBottom: "15px" }}>
+                  <p><strong>Update User Role:</strong></p>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const userId = localStorage.getItem('userId');
+                          if (!userId) return;
+                          
+                          const response = await axios.patch(`http://localhost:3001/api/users/${userId}/type`, {
+                            userType: 'customer'
+                          });
+                          
+                          alert('Updated to customer role');
+                          window.location.reload();
+                        } catch (error) {
+                          console.error("Error updating role:", error);
+                          alert('Failed to update role');
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "8px 0",
+                        backgroundColor: "#9e9e9e",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      Set as Customer
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const userId = localStorage.getItem('userId');
+                          if (!userId) return;
+                          
+                          const response = await axios.patch(`http://localhost:3001/api/users/${userId}/type`, {
+                            userType: 'product'
+                          });
+                          
+                          alert('Updated to product manager role');
+                          window.location.reload();
+                        } catch (error) {
+                          console.error("Error updating role:", error);
+                          alert('Failed to update role');
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "8px 0",
+                        backgroundColor: "#2196f3",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      Set as Product Manager
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const userId = localStorage.getItem('userId');
+                          if (!userId) return;
+                          
+                          const response = await axios.patch(`http://localhost:3001/api/users/${userId}/type`, {
+                            userType: 'sales'
+                          });
+                          
+                          alert('Updated to sales manager role');
+                          window.location.reload();
+                        } catch (error) {
+                          console.error("Error updating role:", error);
+                          alert('Failed to update role');
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "8px 0",
+                        backgroundColor: "#ff9800",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      Set as Sales Manager
+                    </button>
+                  </div>
+                </div>
+                
+                <div style={{ marginTop: "10px" }}>
+                  <button 
+                    onClick={() => checkAccess('product')}
+                    style={{
+                      padding: "8px 12px",
+                      backgroundColor: "var(--primary-color)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      marginRight: "10px",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    Check Product Manager Access
+                  </button>
+                  <button 
+                    onClick={() => checkAccess('sales')}
+                    style={{
+                      padding: "8px 12px",
+                      backgroundColor: "var(--primary-color)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    Check Sales Manager Access
+                  </button>
+                </div>
+                <div style={{ marginTop: "10px" }}>
+                  <Link to="/product-manager" style={{
+                    padding: "8px 12px",
+                    backgroundColor: "#4b6043",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    marginRight: "10px",
+                    fontSize: "0.8rem",
+                    textDecoration: "none",
+                    display: "inline-block"
+                  }}>
+                    Go to Product Manager Dashboard
+                  </Link>
+                  <Link to="/sales-manager" style={{
+                    padding: "8px 12px",
+                    backgroundColor: "#4b6043",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    textDecoration: "none",
+                    display: "inline-block"
+                  }}>
+                    Go to Sales Manager Dashboard
+                  </Link>
+                </div>
               </div>
             )}
 

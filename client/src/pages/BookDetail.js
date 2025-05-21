@@ -4,6 +4,7 @@ import axios from "axios";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
 import { useCart } from "../components/CartContext";
+import { useWishlist } from "../components/WishlistContext";
 
 const BookDetail = () => {
     const { id } = useParams();
@@ -11,7 +12,21 @@ const BookDetail = () => {
     const searchParams = new URLSearchParams(location.search);
     const orderId = searchParams.get('orderId');
     const navigate = useNavigate();
-    const { addToCart } = useCart();
+    
+    // Add default values to prevent destructuring errors for cart
+    const cart = useCart() || {};
+    const { addToCart = () => {} } = cart;
+    
+    // Add default values to prevent destructuring errors for wishlist
+    const wishlist = useWishlist() || {};
+    const { 
+        addToWishlist = () => false, 
+        isInWishlist = () => false, 
+        removeFromWishlist = () => {} 
+    } = wishlist;
+    
+    const [showCheck, setShowCheck] = useState(false);
+    const [showWishlistCheck, setShowWishlistCheck] = useState(false);
 
     // Book info
     const [book, setBook] = useState(null);
@@ -19,8 +34,6 @@ const BookDetail = () => {
     const [reviews, setReviews] = useState([]);
     // New comment form fields
     const [commentText, setCommentText] = useState("");
-    // Button state
-    const [showCheck, setShowCheck] = useState(false);
     // Purchase verification
     const [hasPurchased, setHasPurchased] = useState(false);
     const [isCheckingPurchase, setIsCheckingPurchase] = useState(true);
@@ -315,6 +328,24 @@ const BookDetail = () => {
         }, 2000);
     };
 
+    const handleAddToWishlist = () => {
+        // Add to wishlist
+        if (isInWishlist(id)) {
+            removeFromWishlist(id);
+            return;
+        }
+        
+        if (addToWishlist(book)) {
+            // Show the check and green color
+            setShowWishlistCheck(true);
+            
+            // Reset after animation completes (2 seconds)
+            setTimeout(() => {
+                setShowWishlistCheck(false);
+            }, 2000);
+        }
+    };
+
     // Helper function to display stock status
     const getStockStatus = () => {
         if (book.stock === undefined) return null;
@@ -383,6 +414,15 @@ const BookDetail = () => {
                     
                     .add-cart-btn.added {
                         background-color: #4b6043 !important;
+                    }
+                    
+                    .add-wishlist-btn {
+                        transition: background-color 0.4s ease;
+                    }
+                    
+                    .add-wishlist-btn.added {
+                        background-color: #4b6043 !important;
+                        color: white !important;
                     }
                     
                     .check-icon {
@@ -513,18 +553,34 @@ const BookDetail = () => {
                                 ) : !book.stock || book.stock <= 0 ? "OUT OF STOCK" : "ADD TO CART"}
                             </button>
                             
-                            <button className="btn" style={{
-                                padding: "12px 25px",
-                                border: "1px solid var(--border-color)",
-                                backgroundColor: "transparent",
-                                color: "var(--primary-color)",
-                                cursor: "pointer",
-                                fontWeight: "500",
-                                fontSize: "0.9rem"
-                            }}>ADD TO WISHLIST</button>
+                            <button 
+                                onClick={handleAddToWishlist}
+                                className={`btn add-wishlist-btn ${showWishlistCheck || isInWishlist(id) ? 'added' : ''}`}
+                                style={{
+                                    padding: "12px 25px",
+                                    border: "1px solid var(--border-color)",
+                                    backgroundColor: isInWishlist(id) ? "var(--primary-color)" : "transparent",
+                                    color: isInWishlist(id) ? "white" : "var(--primary-color)",
+                                    cursor: "pointer",
+                                    fontWeight: "500",
+                                    fontSize: "0.9rem",
+                                    position: "relative",
+                                    overflow: "hidden"
+                                }}
+                            >
+                                {showWishlistCheck ? (
+                                    <span className="check-icon">
+                                        ✓ ADDED
+                                    </span>
+                                ) : isInWishlist(id) ? (
+                                    "REMOVE FROM WISHLIST"
+                                ) : (
+                                    "ADD TO WISHLIST"
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
                 {/* Book Rating Summary */}
                 <div style={{
