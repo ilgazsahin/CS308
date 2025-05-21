@@ -23,7 +23,8 @@ const BookSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: true,  // change to false or add a default if needed
+        required: false,  // Changed to false so books can be added without a price
+        default: null     // Default to null until sales manager sets the price
     },
     stock: {
         type: Number,

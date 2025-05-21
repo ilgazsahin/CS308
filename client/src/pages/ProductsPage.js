@@ -37,12 +37,15 @@ const ProductsPage = () => {
             try {
                 setLoading(true);
                 const response = await axios.get("http://localhost:3001/api/books");
-                // Only use real books from the database
-                setBooks(response.data);
-                setDisplayedBooks(response.data);
+                
+                // Filter out books without prices (waiting for sales manager approval)
+                const booksWithPrices = response.data.filter(book => book.price !== null && book.price !== undefined);
+                
+                setBooks(booksWithPrices);
+                setDisplayedBooks(booksWithPrices);
 
                 // Fetch ratings for all books
-                fetchBookRatings(response.data);
+                fetchBookRatings(booksWithPrices);
             } catch (error) {
                 console.error("An error occurred while fetching books:", error);
                 setBooks([]);

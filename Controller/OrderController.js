@@ -137,47 +137,34 @@ router.get("/:orderId", async (req, res) => {
 
 // PATCH: Update order status (for admin panel)
 // PATCH  /api/orders/:orderId/status
-// Controller/OrderController.js  (only the patch route needs changing)
+router.patch("/:orderId/status", async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { status } = req.body;
 
-// PATCH  /api/orders/:orderId/status
+        // Update the valid statuses to match exactly what's expected
+        const validStatuses = ["processing", "in-transit", "delivered"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid status value. Valid values are: processing, in-transit, delivered" });
+        }
 
- router.patch("/:orderId/status", async (req, res) => {
-     try {
-         const { orderId } = req.params;
-         const { status } = req.body;
- 
-         const validStatuses = ["processing", "in-transit", "delivered"];
-         if (!validStatuses.includes(status)) {
-             return res.status(400).json({ message: "Invalid status value" });
-         }
- 
-         const updatedOrder = await OrderModel.findOneAndUpdate(
-             { orderId: parseInt(orderId) },
-             { status },
-             { new: true }
-         );
- 
-         if (!updatedOrder) {
-             return res.status(404).json({ message: "Order not found" });
-         }
-         
-         // Send status update email if order has customer email in shippingInfo
-         if (updatedOrder.shippingInfo && updatedOrder.shippingInfo.email && status === "delivered") {
-             try {
-                 await sendOrderConfirmation(updatedOrder, updatedOrder.shippingInfo.email);
-                 console.log(`Order status update email sent to ${updatedOrder.shippingInfo.email}`);
-             } catch (emailError) {
-                 console.error("Error sending order status update email:", emailError);
-                 // Continue processing even if email fails
-             }
-         }
- 
-         res.json({ message: "Order status updated", order: updatedOrder });
-     } catch (err) {
-         console.error("Error updating order status:", err);
-         res.status(500).json({ message: "Error updating order status", error: err.message });
-     }
- });
+        // Use MongoDB _id for updating instead of orderId field
+        const updatedOrder = await OrderModel.findByIdAndUpdate(
+            orderId,
+            { status },
+            { new: true }
+        );
+
+        if (!updatedOrder) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        res.json({ message: "Order status updated", order: updatedOrder });
+    } catch (err) {
+        console.error("Error updating order status:", err);
+        res.status(500).json({ message: "Error updating order status", error: err.message });
+    }
+});
 
 // Test route for email sending (remove in production)
 router.post("/test-email", async (req, res) => {

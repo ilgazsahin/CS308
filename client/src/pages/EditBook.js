@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
 
 const EditBook = () => {
     const { id } = useParams(); // Book ID from the URL
@@ -11,22 +12,28 @@ const EditBook = () => {
         description: "",
         publishedYear: "",
         image: "",
-        price: "",
-        stock: 0
+        stock: 0,
+        category: ""
     });
+    const [categories, setCategories] = useState([]);
     const [message, setMessage] = useState("");
 
-    // Fetch the book details when component mounts or the id changes
+    // Fetch the book details and categories when component mounts or the id changes
     useEffect(() => {
-        async function fetchBook() {
+        async function fetchData() {
             try {
-                const response = await axios.get(`http://localhost:3001/api/books/${id}`);
-                setBook(response.data);
+                // Fetch book details
+                const bookResponse = await axios.get(`http://localhost:3001/api/books/${id}`);
+                setBook(bookResponse.data);
+                
+                // Fetch categories
+                const categoriesResponse = await axios.get("http://localhost:3001/api/categories");
+                setCategories(categoriesResponse.data);
             } catch (error) {
-                console.error("Error fetching book details:", error);
+                console.error("Error fetching data:", error);
             }
         }
-        fetchBook();
+        fetchData();
     }, [id]);
 
     // Handle changes to form fields
@@ -38,20 +45,19 @@ const EditBook = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Optionally convert publishedYear and price to numbers
+        // Optionally convert publishedYear and stock to numbers
         const updatedBook = {
             ...book,
             publishedYear: book.publishedYear ? Number(book.publishedYear) : undefined,
-            price: book.price ? Number(book.price) : undefined,
             stock: book.stock ? Number(book.stock) : 0
         };
 
         try {
             const response = await axios.put(`http://localhost:3001/api/books/${id}`, updatedBook);
             setMessage("Book updated successfully!");
-            // Optionally, redirect to the book details page after a short delay
+            // Redirect to product manager dashboard after a short delay
             setTimeout(() => {
-                navigate(`/book/${id}`);
+                navigate("/product-manager");
             }, 1000);
         } catch (error) {
             setMessage("Error updating book: " + (error.response?.data?.message || error.message));
@@ -73,8 +79,16 @@ const EditBook = () => {
 
     return (
         <div style={styles.container}>
-            <h2>Edit Book</h2>
+            <div style={styles.backButtonContainer}>
+                <Link to="/product-manager" style={styles.backButton}>
+                    <FaArrowLeft style={{ marginRight: "8px" }} /> Back to Dashboard
+                </Link>
+            </div>
+            
+            <h2 style={styles.title}>Edit Book</h2>
+            
             {message && <p style={styles.message}>{message}</p>}
+            
             <form onSubmit={handleSubmit} style={styles.form}>
                 <input
                     type="text"
@@ -118,15 +132,24 @@ const EditBook = () => {
                     required
                     style={styles.input}
                 />
-                <input
-                    type="number"
-                    name="price"
-                    placeholder="Price"
-                    value={book.price}
-                    onChange={handleChange}
-                    required
-                    style={styles.input}
-                />
+                <div style={styles.formGroup}>
+                    <label htmlFor="category" style={styles.label}>Category:</label>
+                    <select
+                        id="category"
+                        name="category"
+                        value={book.category?._id || book.category || ""}
+                        onChange={handleChange}
+                        required
+                        style={styles.select}
+                    >
+                        <option value="">Select a category</option>
+                        {categories.map(category => (
+                            <option key={category._id} value={category._id}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
                 <div style={styles.stockContainer}>
                     <label htmlFor="stock" style={styles.stockLabel}>Stock Quantity:</label>
                     <input
@@ -145,9 +168,18 @@ const EditBook = () => {
                         book.stock < 5 ? 'Low stock' : 'In stock'}
                     </span>
                 </div>
-                <button type="submit" style={styles.button}>
-                    Save Changes
-                </button>
+                <div style={styles.buttonContainer}>
+                    <button type="submit" style={styles.button}>
+                        Save Changes
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => navigate("/product-manager")}
+                        style={styles.cancelButton}
+                    >
+                        Cancel
+                    </button>
+                </div>
             </form>
         </div>
     );
@@ -157,20 +189,41 @@ const styles = {
     container: {
         maxWidth: "600px",
         margin: "2rem auto",
-        padding: "20px",
+        padding: "30px",
         fontFamily: "sans-serif",
         border: "1px solid #ccc",
         borderRadius: "8px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        position: "relative",
+        backgroundColor: "white"
+    },
+    backButtonContainer: {
+        marginBottom: "20px",
+    },
+    backButton: {
+        display: "inline-flex",
+        alignItems: "center",
+        color: "var(--primary-color)",
+        textDecoration: "none",
+        fontSize: "0.9rem", 
+        fontWeight: "500"
+    },
+    title: {
+        textAlign: "center",
+        marginBottom: "20px",
+        color: "var(--primary-color)",
+        fontSize: "1.8rem",
+        fontFamily: "'Playfair Display', serif",
     },
     message: {
         color: "green",
         marginBottom: "1rem",
+        textAlign: "center",
     },
     form: {
         display: "flex",
         flexDirection: "column",
-        gap: "10px",
+        gap: "15px",
     },
     input: {
         padding: "0.5rem",
@@ -178,7 +231,20 @@ const styles = {
         border: "1px solid #ccc",
     },
     textArea: {
-        height: "80px",
+        height: "100px",
+        padding: "0.5rem",
+        borderRadius: "4px",
+        border: "1px solid #ccc",
+    },
+    formGroup: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "5px",
+    },
+    label: {
+        fontWeight: "bold",
+    },
+    select: {
         padding: "0.5rem",
         borderRadius: "4px",
         border: "1px solid #ccc",
@@ -200,15 +266,31 @@ const styles = {
         border: "1px solid #ccc",
         textAlign: "center",
     },
+    buttonContainer: {
+        display: "flex",
+        gap: "10px",
+        marginTop: "10px",
+    },
     button: {
-        backgroundColor: "#007bff",
+        flex: 1,
+        backgroundColor: "var(--primary-color)",
         color: "#fff",
         border: "none",
         padding: "0.75rem",
         borderRadius: "4px",
         cursor: "pointer",
-        marginTop: "10px",
+        fontWeight: "500",
     },
+    cancelButton: {
+        flex: 1,
+        backgroundColor: "#f5f5f5",
+        color: "#333",
+        border: "1px solid #ccc",
+        padding: "0.75rem",
+        borderRadius: "4px",
+        cursor: "pointer",
+        fontWeight: "500",
+    }
 };
 
 export default EditBook;
