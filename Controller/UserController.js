@@ -22,7 +22,13 @@ router.post("/login", async (req, res) => {
         res.json({
             message: "Login successful",
             token,
-            user: { id: user._id, email: user.email, name: user.name, userType: user.userType }
+            user: { 
+                id: user._id, 
+                email: user.email, 
+                name: user.name, 
+                address: user.address,
+                userType: user.userType 
+            }
         });
     } catch (err) {
         res.status(500).json({ message: "Server error", error: err });
@@ -31,7 +37,7 @@ router.post("/login", async (req, res) => {
 
 // Register Endpoint
 router.post("/register", async (req, res) => {
-    const { email, name, password, userType } = req.body;
+    const { email, name, password, address, userType } = req.body;
     try {
         const existingUser = await UserModel.findOne({ email });
         if (existingUser) {
@@ -40,8 +46,17 @@ router.post("/register", async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         
-        // Create user with userType (defaults to 'customer' if not provided)
-        const userData = { email, name, password: hashedPassword };
+        // Create user with userType and address
+        const userData = { 
+            email, 
+            name, 
+            password: hashedPassword
+        };
+        
+        if (address) {
+            userData.address = address;
+        }
+        
         if (userType && ['customer', 'product', 'sales'].includes(userType)) {
             userData.userType = userType;
         }
@@ -49,7 +64,13 @@ router.post("/register", async (req, res) => {
         const newUser = await UserModel.create(userData);
         res.status(201).json({
             message: "User successfully created",
-            user: { id: newUser._id, email: newUser.email, name: newUser.name, userType: newUser.userType }
+            user: { 
+                id: newUser._id, 
+                email: newUser.email, 
+                name: newUser.name, 
+                address: newUser.address,
+                userType: newUser.userType 
+            }
         });
     } catch (err) {
         res.status(500).json({ message: "Error occurred during registration", error: err });
@@ -88,6 +109,59 @@ router.patch("/:id/type", async (req, res) => {
         res.json({ message: "User type updated successfully", user });
     } catch (err) {
         res.status(500).json({ message: "Error updating user type", error: err.message });
+    }
+});
+
+// Update user address
+router.patch("/:id/address", async (req, res) => {
+    try {
+        const { address } = req.body;
+        
+        if (!address) {
+            return res.status(400).json({ message: "Address is required" });
+        }
+        
+        const user = await UserModel.findByIdAndUpdate(
+            req.params.id, 
+            { address }, 
+            { new: true, runValidators: true }
+        ).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json({ message: "Address updated successfully", user });
+    } catch (err) {
+        res.status(500).json({ message: "Error updating address", error: err.message });
+    }
+});
+
+// Update user profile
+router.put("/:id", async (req, res) => {
+    try {
+        const { name, email, address } = req.body;
+        const updateData = {};
+        
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+        if (address) updateData.address = address;
+        
+        // Don't allow updating userType through this endpoint for security
+        
+        const user = await UserModel.findByIdAndUpdate(
+            req.params.id, 
+            updateData, 
+            { new: true, runValidators: true }
+        ).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json({ message: "Profile updated successfully", user });
+    } catch (err) {
+        res.status(500).json({ message: "Error updating profile", error: err.message });
     }
 });
 
