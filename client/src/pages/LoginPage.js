@@ -5,6 +5,7 @@ import React from "react";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
 import { useCart } from "../components/CartContext";
+import { useWishlist } from "../components/WishlistContext";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -13,7 +14,8 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const navigate = useNavigate();
-  const { handleLogin } = useCart();
+  const { handleLogin: mergeCart } = useCart();
+  const { handleLogin: mergeWishlist } = useWishlist();
 
   // Check if user is already logged in on component mount
   useEffect(() => {
@@ -63,7 +65,10 @@ function Login() {
           console.log("Saved to localStorage - userType:", result.data.user.userType || "");
       
         // Handle cart merging
-        await handleLogin(userId);
+        await mergeCart(userId);
+        
+        // Handle wishlist merging
+        await mergeWishlist(userId);
         
         // Update user info state
         setUserInfo(result.data.user);

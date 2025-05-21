@@ -12,10 +12,23 @@ export const WishlistProvider = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [prevLoginState, setPrevLoginState] = useState(false); // Track previous login state
 
   // Check if user is logged in
   const userId = localStorage.getItem('userId');
   const isLoggedIn = !!userId;
+
+  // Track login state changes
+  useEffect(() => {
+    // If login state changed from logged in to logged out
+    if (prevLoginState && !isLoggedIn) {
+      // User logged out, clear wishlist and switch to local storage
+      handleLogout();
+    }
+    
+    // Update previous login state
+    setPrevLoginState(isLoggedIn);
+  }, [isLoggedIn, prevLoginState]);
 
   // Load wishlist on initial load and when login state changes
   useEffect(() => {
@@ -111,18 +124,18 @@ export const WishlistProvider = ({ children }) => {
     
     // Save wishlist
     if (wishlistItems.length > 0) {
-      if (isLoggedIn) {
-        // Don't need to do anything here as we'll handle adding/removing individually
-        // through API calls in addToWishlist and removeFromWishlist
-      } else {
+      if (!isLoggedIn) {
         // Save to localStorage if not logged in
         localStorage.setItem('wishlist', JSON.stringify(wishlistItems));
       }
+      // For logged-in users, we handle saving to server in the addToWishlist/removeFromWishlist functions
     } else {
       // Wishlist is empty, clear storage
-      localStorage.removeItem('wishlist');
+      if (!isLoggedIn) {
+        localStorage.removeItem('wishlist');
+      }
     }
-  }, [wishlistItems, isLoggedIn, userId]);
+  }, [wishlistItems, isLoggedIn]);
 
   // Function to check if an item is in the wishlist
   const isInWishlist = (productId) => {
@@ -247,6 +260,13 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
+  // Handle user logout - clears local wishlist state and switches to local storage
+  const handleLogout = () => {
+    // Clear the state and start fresh with an empty local wishlist
+    setWishlistItems([]);
+    localStorage.removeItem('wishlist');
+  };
+
   return (
     <WishlistContext.Provider value={{
       wishlistItems,
@@ -256,7 +276,8 @@ export const WishlistProvider = ({ children }) => {
       addToWishlist,
       removeFromWishlist,
       clearWishlist,
-      handleLogin
+      handleLogin,
+      handleLogout
     }}>
       {children}
     </WishlistContext.Provider>

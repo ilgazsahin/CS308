@@ -25,7 +25,7 @@ const NavigationBar = () => {
     const { cartCount = 0, cartTotal = 0, isLoading = false } = cart;
     
     const wishlist = useWishlist() || {};
-    const { wishlistCount = 0 } = wishlist;
+    const { wishlistCount = 0, handleLogout: clearWishlist } = wishlist;
     
     // Direct check for user roles
     const checkRoles = useCallback(async () => {
@@ -143,14 +143,24 @@ const NavigationBar = () => {
     };
 
     const handleLogout = () => {
+        // Call the wishlist context's handleLogout to clear wishlist state
+        if (clearWishlist) {
+            clearWishlist();
+        }
+
+        // Clear user data from localStorage
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
         localStorage.removeItem("userName");
         localStorage.removeItem("userType");
+        
+        // Reset state
         setUserType("");
         setShowProductDashboard(false);
         setShowSalesDashboard(false);
-        navigate("/home"); // Redirect to home as a guest
+        
+        // Navigate to home
+        navigate("/home");
     };
 
     const handleSearch = (e) => {
