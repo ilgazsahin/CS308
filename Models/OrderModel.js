@@ -46,9 +46,7 @@ const OrderSchema = new mongoose.Schema({
         enum: ['processing', 'in-transit', 'delivered'],
         default: 'processing',
         lowercase: true       // guarantees stored values are lower-case
-      }
-    },
-    { timestamps: true }
-  );
+    }
+}, { timestamps: true });
 
 module.exports = mongoose.model('Order', OrderSchema); 

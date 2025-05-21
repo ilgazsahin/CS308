@@ -3,6 +3,23 @@ const router = express.Router();
 const CommentModel = require("../Models/CommentModel");
 const RatingModel = require("../Models/RatingModel");
 const OrderModel = require("../Models/OrderModel");
+const BookModel = require("../Models/BookModel");
+
+// GET all comments for admin (including unapproved)
+router.get("/admin/all", async (req, res) => {
+    try {
+        // Get all comments (approved and unapproved)
+        const comments = await CommentModel.find({})
+            .populate("user", "name email")
+            .populate("book", "title author image")
+            .sort({ createdAt: -1 });
+            
+        res.json(comments);
+    } catch (err) {
+        console.error("Error retrieving all comments:", err);
+        res.status(500).json({ message: "Error retrieving comments", error: err.message });
+    }
+});
 
 // GET all approved comments with their ratings for a specific book
 router.get("/:bookId", async (req, res) => {
