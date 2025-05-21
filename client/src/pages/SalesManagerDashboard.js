@@ -1,11 +1,23 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
-import { FaShoppingBag, FaExclamationTriangle, FaChartBar, FaSearch, FaBook, FaPercent, FaTags, FaMoneyBillWave, FaUsers, FaFileInvoiceDollar, FaCalendarAlt, FaPrint, FaFilePdf } from "react-icons/fa";
+import { FaShoppingBag, FaExclamationTriangle, FaChartBar, FaSearch, FaBook, FaPercent, FaTags, FaMoneyBillWave, FaUsers, FaFileInvoiceDollar, FaCalendarAlt, FaPrint, FaChartLine } from "react-icons/fa";
 import axios from "axios";
-import { useReactToPrint } from 'react-to-print';
-import PrintableInvoice from "../components/PrintableInvoice";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const SalesManagerDashboard = () => {
   const navigate = useNavigate();
@@ -36,12 +48,13 @@ const SalesManagerDashboard = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // Create refs for each invoice for printing
-  const invoicePrintRefs = useRef({});
-  
-  // Track which invoice is being printed
-  const [printingInvoice, setPrintingInvoice] = useState(null);
-  const printRef = useRef(null);
+  // Add state for analytics
+  const [analyticsStartDate, setAnalyticsStartDate] = useState('');
+  const [analyticsEndDate, setAnalyticsEndDate] = useState('');
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('daily'); // 'daily', 'weekly', 'monthly'
+  const [analyticsView, setAnalyticsView] = useState('line'); // 'line', 'bar'
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   
   // Check if user is authorized
   useEffect(() => {
@@ -370,21 +383,349 @@ const SalesManagerDashboard = () => {
     handleFilterOrdersByDate();
   }, [startDate, endDate, orders]);
 
-  // Handle printing of specific invoice
-  const handlePrintInvoice = (order) => {
-    setPrintingInvoice(order);
+  // Function to calculate analytics data
+  const calculateAnalytics = () => {
+    if (!analyticsStartDate || !analyticsEndDate) {
+      alert("Please select both start and end dates");
+      return;
+    }
     
-    setTimeout(() => {
-      if (printRef.current) {
-        const handlePrint = useReactToPrint({
-          content: () => printRef.current,
-          documentTitle: `Invoice-${order._id.substring(order._id.length - 6)}`,
-          onAfterPrint: () => setPrintingInvoice(null),
-        });
-        
-        handlePrint();
+    setAnalyticsLoading(true);
+    
+    const startDateObj = new Date(analyticsStartDate);
+    const endDateObj = new Date(analyticsEndDate);
+    endDateObj.setHours(23, 59, 59, 999); // Set to end of day
+    
+    // Filter orders within the date range
+    const filteredOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= startDateObj && orderDate <= endDateObj;
+    });
+    
+    if (filteredOrders.length === 0) {
+      setAnalyticsData({
+        labels: [],
+        revenueData: [],
+        costData: [],
+        profitData: [],
+        totalRevenue: 0,
+        totalCost: 0,
+        totalProfit: 0
+      });
+      setAnalyticsLoading(false);
+      return;
+    }
+    
+    // Group orders by period (day, week, month)
+    const groupedOrders = {};
+    const labels = [];
+    
+    // Sort orders by date
+    filteredOrders.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    
+    // Group orders by period
+    filteredOrders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      let periodKey = '';
+      
+      if (analyticsPeriod === 'daily') {
+        // Format: "MMM DD, YYYY"
+        periodKey = orderDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+      } else if (analyticsPeriod === 'weekly') {
+        // Get the first day of the week (Sunday)
+        const weekStart = new Date(orderDate);
+        weekStart.setDate(orderDate.getDate() - orderDate.getDay());
+        periodKey = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}`;
+      } else if (analyticsPeriod === 'monthly') {
+        // Format: "MMM YYYY"
+        periodKey = orderDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       }
-    }, 100);
+      
+      if (!groupedOrders[periodKey]) {
+        groupedOrders[periodKey] = [];
+        labels.push(periodKey);
+      }
+      
+      groupedOrders[periodKey].push(order);
+    });
+    
+    // Calculate revenue, cost, and profit for each period
+    const revenueData = [];
+    const costData = [];
+    const profitData = [];
+    
+    labels.forEach(label => {
+      const periodOrders = groupedOrders[label];
+      
+      // Calculate revenue for the period
+      const revenue = periodOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+      
+      // Calculate cost (50% of the revenue as per requirement)
+      const cost = revenue * 0.5;
+      
+      // Calculate profit
+      const profit = revenue - cost;
+      
+      revenueData.push(revenue);
+      costData.push(cost);
+      profitData.push(profit);
+    });
+    
+    // Calculate totals
+    const totalRevenue = revenueData.reduce((sum, value) => sum + value, 0);
+    const totalCost = costData.reduce((sum, value) => sum + value, 0);
+    const totalProfit = profitData.reduce((sum, value) => sum + value, 0);
+    
+    setAnalyticsData({
+      labels,
+      revenueData,
+      costData,
+      profitData,
+      totalRevenue,
+      totalCost,
+      totalProfit
+    });
+    
+    setAnalyticsLoading(false);
+  };
+  
+  // Reset analytics data
+  const resetAnalytics = () => {
+    setAnalyticsStartDate('');
+    setAnalyticsEndDate('');
+    setAnalyticsData(null);
+  };
+  
+  // Function to print an invoice
+  const printInvoice = (order) => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    // Generate the invoice HTML
+    const invoiceHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice #${order._id.substring(order._id.length - 6)}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+          }
+          .invoice-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+          }
+          .invoice-header h1 {
+            font-size: 28px;
+            color: #5d4037;
+            margin: 0 0 10px 0;
+          }
+          .invoice-title {
+            text-align: center;
+            margin: 20px 0;
+          }
+          .invoice-title h2 {
+            margin: 0;
+            font-size: 24px;
+          }
+          .customer-info {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            padding: 20px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+          }
+          .customer-section {
+            flex: 1;
+            min-width: 250px;
+            margin-bottom: 20px;
+          }
+          .customer-section h4 {
+            color: #5d4037;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+          }
+          .customer-section p {
+            margin: 5px 0;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          .items-table th {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 2px solid #eee;
+          }
+          .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+          }
+          .items-table th:last-child,
+          .items-table td:last-child {
+            text-align: right;
+          }
+          .items-table th:nth-child(2),
+          .items-table td:nth-child(2) {
+            text-align: center;
+          }
+          .items-table th:nth-child(3),
+          .items-table td:nth-child(3) {
+            text-align: right;
+          }
+          .summary {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+          }
+          .summary-table {
+            width: 300px;
+          }
+          .summary-table td {
+            padding: 5px 0;
+          }
+          .summary-table td:first-child {
+            text-align: left;
+          }
+          .summary-table td:last-child {
+            text-align: right;
+          }
+          .summary-table tr.total {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 1px solid #eee;
+          }
+          .summary-table tr.total td {
+            padding-top: 10px;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            font-size: 14px;
+            color: #757575;
+          }
+          .footer p {
+            margin: 5px 0;
+          }
+          @media print {
+            body {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-header">
+          <h1>BookStore</h1>
+          <p>123 Book Street, Reading City</p>
+          <p>Email: info@bookstore.com</p>
+          <p>Phone: (123) 456-7890</p>
+        </div>
+        
+        <div class="invoice-title">
+          <h2>INVOICE</h2>
+          <p>#${order._id.substring(order._id.length - 6)}</p>
+          <p>${new Date(order.createdAt).toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric'
+            })}</p>
+        </div>
+        
+        <div class="customer-info">
+          <div class="customer-section">
+            <h4>Customer Information</h4>
+            <p><strong>${order.shippingInfo?.name || "N/A"}</strong></p>
+            <p>${order.shippingInfo?.email || "No email provided"}</p>
+            <p>${order.shippingInfo?.phone || "No phone provided"}</p>
+          </div>
+          <div class="customer-section">
+            <h4>Shipping Address</h4>
+            <p><strong>${order.shippingInfo?.address || "No address provided"}</strong></p>
+            <p>${order.shippingInfo?.city || ""}${order.shippingInfo?.city && order.shippingInfo?.state ? ", " : ""}${order.shippingInfo?.state || ""} ${order.shippingInfo?.zip || ""}</p>
+            <p>${order.shippingInfo?.country || ""}</p>
+          </div>
+        </div>
+        
+        <h4>Order Items</h4>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items && order.items.map(item => `
+              <tr>
+                <td>
+                  <div><strong>${item.title}</strong></div>
+                  <div style="color: #757575; font-size: 0.9em;">${item.author || "Unknown Author"}</div>
+                </td>
+                <td>${item.quantity}</td>
+                <td>$${item.price.toFixed(2)}</td>
+                <td>$${(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div class="summary">
+          <table class="summary-table">
+            <tr>
+              <td>Subtotal:</td>
+              <td>$${order.total.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Shipping:</td>
+              <td>$0.00</td>
+            </tr>
+            <tr class="total">
+              <td>Total:</td>
+              <td>$${order.total.toFixed(2)}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="footer">
+          <p>Thank you for your business!</p>
+          <p>For any questions regarding this invoice, please contact support@bookstore.com</p>
+        </div>
+        
+        <script>
+          // Auto print when loaded
+          window.onload = function() {
+            window.print();
+            // Close the window after printing (but only if not canceled)
+            setTimeout(function() {
+              if (!window.document.execCommand) {
+                window.close();
+              }
+            }, 1000);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+    
+    // Write the HTML to the new window
+    printWindow.document.open();
+    printWindow.document.write(invoiceHtml);
+    printWindow.document.close();
   };
 
   return (
@@ -536,6 +877,25 @@ const SalesManagerDashboard = () => {
             >
               <FaFileInvoiceDollar />
               View Invoices
+            </button>
+            <button
+              onClick={() => setActiveTab("analytics")}
+              style={{
+                padding: "15px 25px",
+                backgroundColor: "transparent",
+                border: "none",
+                borderBottom: activeTab === "analytics" ? "3px solid var(--primary-color)" : "3px solid transparent",
+                color: activeTab === "analytics" ? "var(--primary-color)" : "var(--light-text)",
+                fontWeight: activeTab === "analytics" ? "600" : "400",
+                cursor: "pointer",
+                fontSize: "1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              <FaChartLine />
+              Sales Analytics
             </button>
           </div>
         </div>
@@ -923,7 +1283,7 @@ const SalesManagerDashboard = () => {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === "orders" ? (
           <div style={{
             backgroundColor: "white",
             borderRadius: "8px",
@@ -1077,9 +1437,10 @@ const SalesManagerDashboard = () => {
                           {order.status}
                         </span>
                         
-                        {/* Add Print/PDF Button */}
+                        {/* Print Button - Direct approach */}
                         <button
-                          onClick={() => handlePrintInvoice(order)}
+                          type="button"
+                          onClick={() => printInvoice(order)}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -1092,7 +1453,6 @@ const SalesManagerDashboard = () => {
                             cursor: "pointer",
                             fontSize: "0.8rem"
                           }}
-                          title="Print or save as PDF"
                         >
                           <FaPrint size={14} />
                           Print/PDF
@@ -1210,53 +1570,483 @@ const SalesManagerDashboard = () => {
               </div>
             )}
           </div>
-        )}
-      </div>
-      
-      {/* Printable Invoice Component (hidden until needed) */}
-      <div style={{ display: 'none' }}>
-        {printingInvoice && (
-          <PrintableInvoice 
-            ref={printRef}
-            order={printingInvoice}
-          />
+        ) : (
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "8px",
+            padding: "30px",
+            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
+          }}>
+            <h2 style={{
+              fontSize: "1.5rem",
+              marginBottom: "20px",
+              color: "var(--primary-color)",
+              display: "flex",
+              alignItems: "center"
+            }}>
+              <FaChartLine style={{ marginRight: "10px" }} />
+              Sales Analytics
+            </h2>
+            
+            {/* Analytics Controls */}
+            <div style={{ 
+              backgroundColor: "#f5f5f5",
+              borderRadius: "8px",
+              padding: "20px",
+              marginBottom: "30px"
+            }}>
+              <div style={{ 
+                display: "flex", 
+                gap: "15px", 
+                marginBottom: "20px",
+                flexWrap: "wrap",
+                alignItems: "flex-end"
+              }}>
+                <div>
+                  <label style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "#757575" 
+                  }}>
+                    Start Date
+                  </label>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    padding: "0 10px",
+                    backgroundColor: "white"
+                  }}>
+                    <FaCalendarAlt style={{ color: "var(--light-text)" }} />
+                    <input 
+                      type="date"
+                      value={analyticsStartDate}
+                      onChange={(e) => setAnalyticsStartDate(e.target.value)}
+                      style={{
+                        border: "none",
+                        padding: "10px",
+                        width: "150px",
+                        outline: "none"
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "#757575" 
+                  }}>
+                    End Date
+                  </label>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    padding: "0 10px",
+                    backgroundColor: "white"
+                  }}>
+                    <FaCalendarAlt style={{ color: "var(--light-text)" }} />
+                    <input 
+                      type="date"
+                      value={analyticsEndDate}
+                      onChange={(e) => setAnalyticsEndDate(e.target.value)}
+                      style={{
+                        border: "none",
+                        padding: "10px",
+                        width: "150px",
+                        outline: "none"
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "#757575" 
+                  }}>
+                    Group By
+                  </label>
+                  <select
+                    value={analyticsPeriod}
+                    onChange={(e) => setAnalyticsPeriod(e.target.value)}
+                    style={{
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      minWidth: "120px",
+                      backgroundColor: "white"
+                    }}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: "block", 
+                    marginBottom: "8px", 
+                    fontSize: "0.9rem", 
+                    color: "#757575" 
+                  }}>
+                    Chart Type
+                  </label>
+                  <select
+                    value={analyticsView}
+                    onChange={(e) => setAnalyticsView(e.target.value)}
+                    style={{
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      minWidth: "120px",
+                      backgroundColor: "white"
+                    }}
+                  >
+                    <option value="line">Line Chart</option>
+                    <option value="bar">Bar Chart</option>
+                  </select>
+                </div>
+                
+                <div style={{ marginLeft: "auto" }}>
+                  <button
+                    onClick={calculateAnalytics}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: "var(--primary-color)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "1rem",
+                      fontWeight: "500",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px"
+                    }}
+                  >
+                    <FaChartBar />
+                    Generate Report
+                  </button>
+                  
+                  <button
+                    onClick={resetAnalytics}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: "#f5f5f5",
+                      color: "#757575",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      marginTop: "10px",
+                      width: "100%"
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              
+              <div style={{ fontSize: "0.9rem", color: "#757575" }}>
+                <p><strong>Note:</strong> Product cost is calculated as 50% of the sale price for this analysis.</p>
+              </div>
+            </div>
+            
+            {/* Analytics Results */}
+            {analyticsLoading ? (
+              <div style={{ textAlign: "center", padding: "50px 0" }}>
+                <p>Generating analytics...</p>
+              </div>
+            ) : analyticsData ? (
+              <div>
+                {/* Summary Cards */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+                  gap: "20px",
+                  marginBottom: "30px"
+                }}>
+                  <div style={{
+                    backgroundColor: "#e3f2fd",
+                    borderRadius: "8px",
+                    padding: "20px",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
+                  }}>
+                    <h3 style={{ fontSize: "1rem", color: "#0d47a1", margin: "0 0 10px 0" }}>
+                      Total Revenue
+                    </h3>
+                    <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#0d47a1" }}>
+                      ${analyticsData.totalRevenue.toFixed(2)}
+                    </p>
+                  </div>
+                  
+                  <div style={{
+                    backgroundColor: "#ffebee",
+                    borderRadius: "8px",
+                    padding: "20px",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
+                  }}>
+                    <h3 style={{ fontSize: "1rem", color: "#c62828", margin: "0 0 10px 0" }}>
+                      Total Cost
+                    </h3>
+                    <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#c62828" }}>
+                      ${analyticsData.totalCost.toFixed(2)}
+                    </p>
+                  </div>
+                  
+                  <div style={{
+                    backgroundColor: "#e8f5e9",
+                    borderRadius: "8px",
+                    padding: "20px",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
+                  }}>
+                    <h3 style={{ fontSize: "1rem", color: "#2e7d32", margin: "0 0 10px 0" }}>
+                      Total Profit
+                    </h3>
+                    <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#2e7d32" }}>
+                      ${analyticsData.totalProfit.toFixed(2)}
+                    </p>
+                  </div>
+                  
+                  <div style={{
+                    backgroundColor: "#f3e5f5",
+                    borderRadius: "8px",
+                    padding: "20px",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
+                  }}>
+                    <h3 style={{ fontSize: "1rem", color: "#6a1b9a", margin: "0 0 10px 0" }}>
+                      Profit Margin
+                    </h3>
+                    <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#6a1b9a" }}>
+                      {analyticsData.totalRevenue ? (analyticsData.totalProfit / analyticsData.totalRevenue * 100).toFixed(1) : 0}%
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Chart */}
+                <div style={{ 
+                  backgroundColor: "white", 
+                  borderRadius: "8px",
+                  border: "1px solid #eee",
+                  padding: "20px",
+                  height: "400px",
+                  marginBottom: "30px"
+                }}>
+                  {analyticsData.labels.length > 0 ? (
+                    analyticsView === 'line' ? (
+                      <Line
+                        data={{
+                          labels: analyticsData.labels,
+                          datasets: [
+                            {
+                              label: 'Revenue',
+                              data: analyticsData.revenueData,
+                              borderColor: '#2196f3',
+                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              tension: 0.3,
+                            },
+                            {
+                              label: 'Cost',
+                              data: analyticsData.costData,
+                              borderColor: '#f44336',
+                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                              tension: 0.3,
+                            },
+                            {
+                              label: 'Profit',
+                              data: analyticsData.profitData,
+                              borderColor: '#4caf50',
+                              backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                              tension: 0.3,
+                            }
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top',
+                            },
+                            title: {
+                              display: true,
+                              text: `Sales Analytics (${analyticsPeriod.charAt(0).toUpperCase() + analyticsPeriod.slice(1)})`,
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  return `${context.dataset.label}: $${context.parsed.y.toFixed(2)}`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                callback: function(value) {
+                                  return '$' + value;
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Bar
+                        data={{
+                          labels: analyticsData.labels,
+                          datasets: [
+                            {
+                              label: 'Revenue',
+                              data: analyticsData.revenueData,
+                              backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                            },
+                            {
+                              label: 'Cost',
+                              data: analyticsData.costData,
+                              backgroundColor: 'rgba(244, 67, 54, 0.7)',
+                            },
+                            {
+                              label: 'Profit',
+                              data: analyticsData.profitData,
+                              backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                            }
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top',
+                            },
+                            title: {
+                              display: true,
+                              text: `Sales Analytics (${analyticsPeriod.charAt(0).toUpperCase() + analyticsPeriod.slice(1)})`,
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  return `${context.dataset.label}: $${context.parsed.y.toFixed(2)}`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                callback: function(value) {
+                                  return '$' + value;
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    )
+                  ) : (
+                    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <p style={{ color: "#757575" }}>No data available for the selected date range.</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Data Table */}
+                {analyticsData.labels.length > 0 && (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{
+                      width: "100%",
+                      borderCollapse: "collapse"
+                    }}>
+                      <thead>
+                        <tr style={{
+                          backgroundColor: "#f5f5f5",
+                          borderBottom: "2px solid var(--border-color)"
+                        }}>
+                          <th style={{ padding: "15px", textAlign: "left", fontWeight: "500" }}>Period</th>
+                          <th style={{ padding: "15px", textAlign: "right", fontWeight: "500" }}>Revenue</th>
+                          <th style={{ padding: "15px", textAlign: "right", fontWeight: "500" }}>Cost</th>
+                          <th style={{ padding: "15px", textAlign: "right", fontWeight: "500" }}>Profit</th>
+                          <th style={{ padding: "15px", textAlign: "right", fontWeight: "500" }}>Margin</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analyticsData.labels.map((label, index) => (
+                          <tr key={index} style={{
+                            borderBottom: "1px solid var(--border-color)"
+                          }}>
+                            <td style={{ padding: "15px" }}>{label}</td>
+                            <td style={{ padding: "15px", textAlign: "right", color: "#2196f3", fontWeight: "500" }}>
+                              ${analyticsData.revenueData[index].toFixed(2)}
+                            </td>
+                            <td style={{ padding: "15px", textAlign: "right", color: "#f44336", fontWeight: "500" }}>
+                              ${analyticsData.costData[index].toFixed(2)}
+                            </td>
+                            <td style={{ padding: "15px", textAlign: "right", color: "#4caf50", fontWeight: "500" }}>
+                              ${analyticsData.profitData[index].toFixed(2)}
+                            </td>
+                            <td style={{ padding: "15px", textAlign: "right", color: "#6a1b9a", fontWeight: "500" }}>
+                              {(analyticsData.profitData[index] / analyticsData.revenueData[index] * 100).toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                        <tr style={{
+                          borderTop: "2px solid var(--border-color)",
+                          backgroundColor: "#fafafa"
+                        }}>
+                          <td style={{ padding: "15px", fontWeight: "600" }}>Total</td>
+                          <td style={{ padding: "15px", textAlign: "right", color: "#2196f3", fontWeight: "600" }}>
+                            ${analyticsData.totalRevenue.toFixed(2)}
+                          </td>
+                          <td style={{ padding: "15px", textAlign: "right", color: "#f44336", fontWeight: "600" }}>
+                            ${analyticsData.totalCost.toFixed(2)}
+                          </td>
+                          <td style={{ padding: "15px", textAlign: "right", color: "#4caf50", fontWeight: "600" }}>
+                            ${analyticsData.totalProfit.toFixed(2)}
+                          </td>
+                          <td style={{ padding: "15px", textAlign: "right", color: "#6a1b9a", fontWeight: "600" }}>
+                            {(analyticsData.totalProfit / analyticsData.totalRevenue * 100).toFixed(1)}%
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ 
+                padding: "40px 20px", 
+                textAlign: "center",
+                backgroundColor: "#f9f9f9",
+                borderRadius: "8px",
+                border: "1px dashed #ddd"
+              }}>
+                <FaChartBar size={48} style={{ color: "#bdbdbd", marginBottom: "20px" }} />
+                <h3 style={{ color: "#757575", fontSize: "1.2rem", fontWeight: "normal", marginBottom: "10px" }}>
+                  No Analytics Data
+                </h3>
+                <p style={{ color: "#9e9e9e" }}>
+                  Select a date range and click "Generate Report" to view sales analytics.
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </div>
       
       <Footer />
-      
-      {/* Add print styles */}
-      <style>
-        {`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            .container *:not(.printable-content *) {
-              visibility: hidden;
-            }
-            .printable-content, .printable-content * {
-              visibility: visible !important;
-            }
-            .printable-content {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              padding: 20px;
-            }
-            .print-only {
-              display: block !important;
-            }
-            .no-print {
-              display: none !important;
-            }
-            nav, footer, button {
-              display: none !important;
-            }
-          }
-        `}
-      </style>
     </div>
   );
 };
