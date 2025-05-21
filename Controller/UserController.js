@@ -18,11 +18,11 @@ router.post("/login", async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
-        const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, email: user.email, userType: user.userType }, JWT_SECRET, { expiresIn: '1h' });
         res.json({
             message: "Login successful",
             token,
-            user: { id: user._id, email: user.email, name: user.name }
+            user: { id: user._id, email: user.email, name: user.name, userType: user.userType }
         });
     } catch (err) {
         res.status(500).json({ message: "Server error", error: err });
@@ -31,7 +31,7 @@ router.post("/login", async (req, res) => {
 
 // Register Endpoint
 router.post("/register", async (req, res) => {
-    const { email, name, password } = req.body;
+    const { email, name, password, userType } = req.body;
     try {
         const existingUser = await UserModel.findOne({ email });
         if (existingUser) {
@@ -39,13 +39,55 @@ router.post("/register", async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const newUser = await UserModel.create({ email, name, password: hashedPassword });
+        
+        // Create user with userType (defaults to 'customer' if not provided)
+        const userData = { email, name, password: hashedPassword };
+        if (userType && ['customer', 'product', 'sales'].includes(userType)) {
+            userData.userType = userType;
+        }
+        
+        const newUser = await UserModel.create(userData);
         res.status(201).json({
             message: "User successfully created",
-            user: { id: newUser._id, email: newUser.email, name: newUser.name }
+            user: { id: newUser._id, email: newUser.email, name: newUser.name, userType: newUser.userType }
         });
     } catch (err) {
         res.status(500).json({ message: "Error occurred during registration", error: err });
+    }
+});
+
+// Get all users (admin endpoint)
+router.get("/", async (req, res) => {
+    try {
+        const users = await UserModel.find({}, { password: 0 }); // Exclude password
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: "Error retrieving users", error: err.message });
+    }
+});
+
+// Update user type
+router.patch("/:id/type", async (req, res) => {
+    try {
+        const { userType } = req.body;
+        
+        if (!userType || !['customer', 'product', 'sales'].includes(userType)) {
+            return res.status(400).json({ message: "Invalid user type" });
+        }
+        
+        const user = await UserModel.findByIdAndUpdate(
+            req.params.id, 
+            { userType }, 
+            { new: true, runValidators: true }
+        ).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json({ message: "User type updated successfully", user });
+    } catch (err) {
+        res.status(500).json({ message: "Error updating user type", error: err.message });
     }
 });
 
