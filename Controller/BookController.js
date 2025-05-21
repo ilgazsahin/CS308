@@ -1,17 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const BookModel = require("../Models/BookModel");
-
-// Get All Categories - Moving this route before the ID route to avoid path conflicts
-router.get("/categories", async (req, res) => {
-    try {
-        // Extract categories from the model's schema
-        const categories = BookModel.schema.path('category').enumValues;
-        res.json(categories);
-    } catch (err) {
-        res.status(500).json({ message: "Categories could not be retrieved", error: err.message });
-    }
-});
+const CategoryModel = require("../Models/CategoryModel");
 
 // Add Book Endpoint
 router.post("/", async (req, res) => {
@@ -34,7 +24,7 @@ router.get("/", async (req, res) => {
             filter.category = category;
         }
         
-        const books = await BookModel.find(filter);
+        const books = await BookModel.find(filter).populate('category');
         res.json(books);
     } catch (err) {
         res.status(500).json({ message: "Books could not be retrieved", error: err.message });
@@ -44,7 +34,7 @@ router.get("/", async (req, res) => {
 // Get a Single Book by ID
 router.get("/:id", async (req, res) => {
     try {
-        const book = await BookModel.findById(req.params.id);
+        const book = await BookModel.findById(req.params.id).populate('category');
         if (!book) {
             return res.status(404).json({ message: "Book not found" });
         }
@@ -61,7 +51,7 @@ router.put("/:id", async (req, res) => {
             req.params.id,
             req.body,
             { new: true, runValidators: true }
-        );
+        ).populate('category');
         if (!updatedBook) {
             return res.status(404).json({ message: "Book not found" });
         }

@@ -54,7 +54,7 @@ const ProductsPage = () => {
         
         async function fetchCategories() {
             try {
-                const response = await axios.get("http://localhost:3001/api/books/categories");
+                const response = await axios.get("http://localhost:3001/api/categories");
                 setCategories(response.data);
             } catch (error) {
                 console.error("An error occurred while fetching categories:", error);
@@ -109,7 +109,7 @@ const ProductsPage = () => {
         
         // Apply category filter
         if (category) {
-            filtered = filtered.filter(book => book.category === category);
+            filtered = filtered.filter(book => book.category && book.category._id === category);
         }
         
         return filtered;
@@ -289,8 +289,8 @@ const ProductsPage = () => {
     };
 
     // Function to render category badge
-    const getCategoryBadge = (category) => {
-        if (!category) return null;
+    const getCategoryBadge = (book) => {
+        if (!book.category) return null;
         
         return (
             <div style={{
@@ -305,7 +305,7 @@ const ProductsPage = () => {
                 fontSize: "0.8rem",
                 zIndex: 2
             }}>
-                {category}
+                {book.category.name}
             </div>
         );
     };
@@ -366,7 +366,9 @@ const ProductsPage = () => {
                     color: "var(--primary-color)",
                     textAlign: "center"
                 }}>
-                    {selectedCategory ? `${selectedCategory} Books` : "All Products"}
+                    {selectedCategory ? 
+                        `${categories.find(c => c._id === selectedCategory)?.name || 'Selected'} Books` : 
+                        "All Products"}
                 </h1>
 
                 {/* Active filters display */}
@@ -392,7 +394,7 @@ const ProductsPage = () => {
                                 alignItems: "center",
                                 gap: "5px"
                             }}>
-                                Category: {selectedCategory}
+                                Category: {categories.find(c => c._id === selectedCategory)?.name || selectedCategory}
                                 <span 
                                     onClick={() => handleCategoryChange("")}
                                     style={{ cursor: "pointer", fontWeight: "bold" }}
@@ -516,79 +518,86 @@ const ProductsPage = () => {
                     <div style={{
                         display: "grid",
                         gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-                        gap: "30px",
-                        marginBottom: "50px"
+                        gap: "40px",
+                        margin: "40px 0"
                     }}>
                         {displayedBooks.map((book) => (
-                            <div key={book._id} className="book-card" style={{
+                            <div key={book._id} style={{
                                 backgroundColor: "white",
-                                transition: "transform 0.3s ease",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
+                                transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                                position: "relative",
                                 height: "100%",
                                 display: "flex",
-                                flexDirection: "column"
-                            }}>
-                                <Link
-                                    to={`/book/${book._id}`}
-                                    style={{
-                                        textDecoration: "none",
-                                        color: "inherit",
-                                        height: "100%",
-                                        display: "flex",
-                                        flexDirection: "column"
-                                    }}
-                                >
+                                flexDirection: "column",
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.transform = "translateY(-5px)";
+                                e.currentTarget.style.boxShadow = "0 12px 20px rgba(0, 0, 0, 0.1)";
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = "0 2px 10px rgba(0, 0, 0, 0.05)";
+                            }}
+                            >
+                                {/* Stock Badge */}
+                                {getStockBadge(book.stock)}
+                                
+                                {/* Category Badge */}
+                                {getCategoryBadge(book)}
+                                
+                                {/* Book Image */}
+                                <Link to={`/book/${book._id}`} style={{ textDecoration: "none" }}>
                                     <div style={{
-                                        height: "350px",
-                                        overflow: "hidden",
+                                        height: "220px",
+                                        backgroundColor: "#f8f8f8",
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        backgroundColor: "#f5f5f5",
-                                        position: "relative",
-                                        flexGrow: 0
+                                        position: "relative"
                                     }}>
-                                        {getStockBadge(book.stock)}
-                                        {getCategoryBadge(book.category)}
-                                        <img
-                                            src={book.image}
+                                        <img 
+                                            src={book.image} 
                                             alt={book.title}
                                             style={{
-                                                height: "100%",
-                                                width: "100%",
-                                                objectFit: "cover"
+                                                maxWidth: "100%",
+                                                maxHeight: "100%",
+                                                objectFit: "contain"
                                             }}
                                         />
                                     </div>
-                                    <div style={{
-                                        padding: "20px 15px",
-                                        textAlign: "center",
-                                        flexGrow: 1,
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        justifyContent: "space-between"
-                                    }}>
-                                        <div>
-                                            <h3 style={{
-                                                fontSize: "1.1rem",
-                                                fontWeight: "500",
-                                                marginBottom: "6px",
-                                                fontFamily: "'Playfair Display', serif",
-                                                color: "var(--primary-color)"
-                                            }}>{book.title}</h3>
-                                            <p style={{
-                                                fontSize: "0.9rem",
-                                                color: "var(--light-text)",
-                                                marginBottom: "5px"
-                                            }}>{book.author}</p>
-                                            {renderRatingStars(book._id)}
-                                        </div>
-                                        <p style={{
-                                            fontSize: "1rem",
-                                            fontWeight: "500",
-                                            color: "var(--primary-color)"
-                                        }}>${book.price || "35.00"}</p>
-                                    </div>
                                 </Link>
+                                <div style={{
+                                    padding: "20px 15px",
+                                    textAlign: "center",
+                                    flexGrow: 1,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    justifyContent: "space-between"
+                                }}>
+                                    <div>
+                                        <h3 style={{
+                                            fontSize: "1.1rem",
+                                            fontWeight: "500",
+                                            marginBottom: "6px",
+                                            fontFamily: "'Playfair Display', serif",
+                                            color: "var(--primary-color)"
+                                        }}>{book.title}</h3>
+                                        <p style={{
+                                            fontSize: "0.9rem",
+                                            color: "var(--light-text)",
+                                            marginBottom: "5px"
+                                        }}>{book.author}</p>
+                                        {renderRatingStars(book._id)}
+                                    </div>
+                                    <p style={{
+                                        fontSize: "1rem",
+                                        fontWeight: "500",
+                                        color: "var(--primary-color)"
+                                    }}>${book.price || "35.00"}</p>
+                                </div>
                             </div>
                         ))}
                     </div>

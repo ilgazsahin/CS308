@@ -15,6 +15,7 @@ const OrderController = require("./Controller/OrderController");
 const RatingController = require("./Controller/RatingController");
 const CartController = require("./Controller/CartController");
 const WishlistController = require("./Controller/wishListController");
+const CategoryController = require("./Controller/CategoryController");
 
 // Import the simplified email service
 const { sendSimpleOrderEmail } = require('./utils/simplifiedEmailService');
@@ -41,7 +42,7 @@ mongoose.connection.once('open', async () => {
   const collections = await db.listCollections().toArray();
   const names       = collections.map(c => c.name);
 
-  const needed = ['books', 'users', 'comments', 'ratings', 'orders', 'carts'];
+  const needed = ['books', 'users', 'comments', 'ratings', 'orders', 'carts', 'categories'];
   for (const name of needed) {
     if (!names.includes(name)) {
       await db.createCollection(name);
@@ -60,6 +61,7 @@ app.use("/api/orders", OrderController);
 app.use("/api/ratings", RatingController);
 app.use("/api/carts", CartController);
 app.use('/api/wishlist', WishlistController);
+app.use('/api/categories', CategoryController);
 
 // Simple test route for emails
 app.post('/test-email', async (req, res) => {

@@ -31,11 +31,9 @@ const BookSchema = new mongoose.Schema({
         min: 0           // Stock cannot be negative
     },
     category: {
-        type: String,
-        enum: ['Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Thriller', 
-               'Romance', 'Horror', 'Biography', 'History', 'Self-Help', 'Business', 
-               'Children', 'Young Adult', 'Poetry', 'Classic', 'Other'],
-        default: 'Other'
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: true
     }
 }, {
     timestamps: true,

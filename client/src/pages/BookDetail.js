@@ -463,6 +463,14 @@ const BookDetail = () => {
                                 marginBottom: "10px"
                             }}><strong>Published:</strong> {book.publishedYear}</p>
                         )}
+
+                        {book.category && (
+                            <p style={{
+                                fontSize: "1rem",
+                                color: "var(--light-text)",
+                                marginBottom: "10px"
+                            }}><strong>Category:</strong> {book.category.name}</p>
+                        )}
                         
                         {/* Stock Status */}
                         {getStockStatus()}
@@ -699,7 +707,7 @@ const BookDetail = () => {
                                 }}>
                                     <div style={{display: "flex", justifyContent: "space-between", marginBottom: "10px"}}>
                                         <p style={{fontWeight: "500", color: "var(--primary-color)"}}>
-                                            {review.user.name || review.user.email}
+                                            {review.user && (review.user.name || review.user.email) || "Anonymous User"}
                                         </p>
                                         <p style={{color: "var(--light-text)", fontSize: "0.9rem"}}>
                                             {new Date(review.createdAt).toLocaleDateString()}

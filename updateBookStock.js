@@ -6,7 +6,7 @@ const BookModel = require('./Models/BookModel');
 const updateBookStock = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect("mongodb://localhost:27017/MyLocalBookstore", {
+    await mongoose.connect("mongodb+srv://ilgaz:CS308@cluster0.zy6wx.mongodb.net/MyLocalBookstore", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });

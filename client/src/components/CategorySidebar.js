@@ -12,7 +12,7 @@ const CategorySidebar = ({ isOpen, onClose }) => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:3001/api/books/categories');
+        const response = await axios.get('http://localhost:3001/api/categories');
         setCategories(response.data);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -27,7 +27,7 @@ const CategorySidebar = ({ isOpen, onClose }) => {
 
   const handleCategoryClick = (category) => {
     // Navigate to products page with the selected category as a query parameter
-    navigate(`/products?category=${encodeURIComponent(category)}`);
+    navigate(`/products?category=${encodeURIComponent(category._id)}`);
     onClose(); // Close the sidebar after selection
   };
 
@@ -146,7 +146,7 @@ const CategorySidebar = ({ isOpen, onClose }) => {
 
               {categories.map((category) => (
                 <div
-                  key={category}
+                  key={category._id}
                   style={{
                     marginBottom: '10px',
                   }}
@@ -173,7 +173,7 @@ const CategorySidebar = ({ isOpen, onClose }) => {
                       e.currentTarget.style.backgroundColor = 'white';
                     }}
                   >
-                    {category}
+                    {category.name}
                   </button>
                 </div>
               ))}
