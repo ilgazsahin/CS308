@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
-import { FaShoppingBag, FaExclamationTriangle, FaChartBar, FaSearch, FaBook, FaPercent, FaTags, FaMoneyBillWave, FaUsers, FaFileInvoiceDollar, FaCalendarAlt, FaPrint, FaChartLine } from "react-icons/fa";
+import { FaShoppingBag, FaExclamationTriangle, FaChartBar, FaSearch, FaBook, FaPercent, FaTags, FaMoneyBillWave, FaUsers, FaFileInvoiceDollar, FaCalendarAlt, FaPrint, FaChartLine, FaUndo, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import axios from "axios";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
@@ -55,6 +55,14 @@ const SalesManagerDashboard = () => {
   const [analyticsPeriod, setAnalyticsPeriod] = useState('daily'); // 'daily', 'weekly', 'monthly'
   const [analyticsView, setAnalyticsView] = useState('line'); // 'line', 'bar'
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  
+  // Add states for refund management
+  const [refundRequests, setRefundRequests] = useState([]);
+  const [refundAmounts, setRefundAmounts] = useState({});
+  const [refundNotes, setRefundNotes] = useState({});
+  const [processingRefund, setProcessingRefund] = useState(false);
+  const [refundSearch, setRefundSearch] = useState('');
+  const [filteredRefundRequests, setFilteredRefundRequests] = useState([]);
   
   // Check if user is authorized
   useEffect(() => {
@@ -728,194 +736,356 @@ const SalesManagerDashboard = () => {
     printWindow.document.close();
   };
 
+  // Fetch all orders with refund-requested status
+  const fetchRefundRequests = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/api/orders");
+      
+      // Filter orders with 'refund-requested' status
+      const refundReqs = response.data.filter(order => 
+        order.status.toLowerCase() === 'refund-requested'
+      );
+      
+      // Sort by date, newest first
+      refundReqs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      console.log("Refund requests:", refundReqs);
+      setRefundRequests(refundReqs);
+      setFilteredRefundRequests(refundReqs);
+      
+      // Initialize refundAmounts with default values (full refund)
+      const amounts = {};
+      refundReqs.forEach(order => {
+        amounts[order._id] = order.total;
+      });
+      setRefundAmounts(amounts);
+      
+      // Initialize refundNotes
+      const notes = {};
+      refundReqs.forEach(order => {
+        notes[order._id] = '';
+      });
+      setRefundNotes(notes);
+      
+    } catch (error) {
+      console.error("Error fetching refund requests:", error);
+      setError("Failed to load refund requests. Please try again later.");
+    }
+  };
+
+  // Process a refund (approve or reject)
+  const handleProcessRefund = async (orderId, approved) => {
+    try {
+      setProcessingRefund(true);
+      
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        alert("Session expired. Please login again.");
+        navigate("/login");
+        return;
+      }
+      
+      console.log("Processing refund:", {
+        orderId,
+        approved,
+        processorId: userId,
+        notes: refundNotes[orderId],
+        refundAmount: approved ? refundAmounts[orderId] : 0
+      });
+      
+      const response = await axios.patch(`http://localhost:3001/api/orders/${orderId}/process-refund`, {
+        approved,
+        processorId: userId,
+        notes: refundNotes[orderId],
+        refundAmount: approved ? refundAmounts[orderId] : 0
+      });
+      
+      console.log("Refund processed:", response.data);
+      
+      // Remove the processed refund request from the list
+      setRefundRequests(refundRequests.filter(req => req._id !== orderId));
+      setFilteredRefundRequests(filteredRefundRequests.filter(req => req._id !== orderId));
+      
+      // Show success message
+      alert(approved ? "Refund approved successfully!" : "Refund request rejected.");
+      
+      // Refresh orders list
+      fetchOrders();
+      
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      let errorMessage = "Failed to process refund. Please try again.";
+      
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setProcessingRefund(false);
+    }
+  };
+
+  // Handle refund amount change
+  const handleRefundAmountChange = (orderId, value) => {
+    const numValue = parseFloat(value);
+    const order = refundRequests.find(req => req._id === orderId);
+    
+    if (order && numValue > order.total) {
+      alert(`Refund amount cannot exceed the order total ($${order.total.toFixed(2)})`);
+      setRefundAmounts({...refundAmounts, [orderId]: order.total});
+      return;
+    }
+    
+    if (numValue < 0) {
+      alert("Refund amount cannot be negative");
+      setRefundAmounts({...refundAmounts, [orderId]: 0});
+      return;
+    }
+    
+    setRefundAmounts({...refundAmounts, [orderId]: numValue || 0});
+  };
+
+  // Handle refund notes change
+  const handleRefundNotesChange = (orderId, value) => {
+    setRefundNotes({...refundNotes, [orderId]: value});
+  };
+
+  // Handle refund search
+  const handleRefundSearch = (value) => {
+    setRefundSearch(value);
+    
+    if (!value.trim()) {
+      setFilteredRefundRequests(refundRequests);
+      return;
+    }
+    
+    const searchTerm = value.toLowerCase();
+    const filtered = refundRequests.filter(order => 
+      (order.orderId && order.orderId.toString().includes(searchTerm)) ||
+      (order._id && order._id.toString().includes(searchTerm)) ||
+      (order.shippingInfo && order.shippingInfo.name && order.shippingInfo.name.toLowerCase().includes(searchTerm)) ||
+      (order.shippingInfo && order.shippingInfo.email && order.shippingInfo.email.toLowerCase().includes(searchTerm))
+    );
+    
+    setFilteredRefundRequests(filtered);
+  };
+
+  // Fetch refund requests when activeTab changes to 'refunds'
+  useEffect(() => {
+    if (activeTab === 'refunds') {
+      fetchRefundRequests();
+    }
+  }, [activeTab]);
+
   return (
-    <div style={{ backgroundColor: "var(--light-bg)", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
       <NavigationBar />
       
-      <div className="container" style={{ padding: "60px 0" }}>
+      <div className="container" style={{ padding: "40px 0" }}>
         <div style={{ marginBottom: "30px" }}>
-          <h1 style={{
+          <h1 style={{ 
             fontFamily: "'Playfair Display', serif",
             fontSize: "2.5rem",
-            fontWeight: "500",
             color: "var(--primary-color)",
-            margin: 0
+            marginBottom: "10px"
           }}>
             Sales Manager Dashboard
           </h1>
+          <p style={{ color: "var(--light-text)", fontSize: "1.1rem" }}>
+            Manage your store's pricing, discounts, and refunds
+          </p>
         </div>
         
-        {/* Stats Cards */}
+        {/* Dashboard Stats */}
         <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+          display: "flex",
+          flexWrap: "wrap",
           gap: "20px",
-          marginBottom: "40px"
+          marginBottom: "40px" 
         }}>
           <div style={{
+            flex: "1 1 200px",
             backgroundColor: "white",
-            borderRadius: "8px",
             padding: "20px",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
-            borderLeft: "4px solid var(--primary-color)"
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
           }}>
-            <h3 style={{ fontSize: "1rem", color: "var(--light-text)", margin: "0 0 10px 0" }}>
-              Total Sales
-            </h3>
-            <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "var(--primary-color)" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "15px" }}>
+              <FaMoneyBillWave style={{ color: "#4caf50", fontSize: "24px", marginRight: "10px" }} />
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "500" }}>Total Sales</h3>
+            </div>
+            <p style={{ fontSize: "1.8rem", fontWeight: "700", margin: 0, color: "var(--primary-color)" }}>
               ${stats.totalSales.toFixed(2)}
             </p>
           </div>
           
           <div style={{
+            flex: "1 1 200px",
             backgroundColor: "white",
-            borderRadius: "8px",
             padding: "20px",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
-            borderLeft: "4px solid #4caf50"
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
           }}>
-            <h3 style={{ fontSize: "1rem", color: "var(--light-text)", margin: "0 0 10px 0" }}>
-              Total Orders
-            </h3>
-            <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#4caf50" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "15px" }}>
+              <FaShoppingBag style={{ color: "#2196f3", fontSize: "24px", marginRight: "10px" }} />
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "500" }}>Total Orders</h3>
+            </div>
+            <p style={{ fontSize: "1.8rem", fontWeight: "700", margin: 0, color: "var(--primary-color)" }}>
               {stats.totalOrders}
             </p>
           </div>
           
           <div style={{
+            flex: "1 1 200px",
             backgroundColor: "white",
-            borderRadius: "8px",
             padding: "20px",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
-            borderLeft: "4px solid #2196f3"
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
           }}>
-            <h3 style={{ fontSize: "1rem", color: "var(--light-text)", margin: "0 0 10px 0" }}>
-              Average Order
-            </h3>
-            <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#2196f3" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "15px" }}>
+              <FaFileInvoiceDollar style={{ color: "#9c27b0", fontSize: "24px", marginRight: "10px" }} />
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "500" }}>Average Order Value</h3>
+            </div>
+            <p style={{ fontSize: "1.8rem", fontWeight: "700", margin: 0, color: "var(--primary-color)" }}>
               ${stats.averageOrderValue.toFixed(2)}
             </p>
           </div>
           
           <div style={{
+            flex: "1 1 200px",
             backgroundColor: "white",
-            borderRadius: "8px",
             padding: "20px",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
-            borderLeft: "4px solid #f57c00"
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
           }}>
-            <h3 style={{ fontSize: "1rem", color: "var(--light-text)", margin: "0 0 10px 0" }}>
-              Pending Orders
-            </h3>
-            <p style={{ fontSize: "1.8rem", fontWeight: "500", margin: 0, color: "#f57c00" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "15px" }}>
+              <FaExclamationTriangle style={{ color: "#ff9800", fontSize: "24px", marginRight: "10px" }} />
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "500" }}>Pending Orders</h3>
+            </div>
+            <p style={{ fontSize: "1.8rem", fontWeight: "700", margin: 0, color: "var(--primary-color)" }}>
               {stats.pendingOrders}
             </p>
           </div>
         </div>
-
+        
         {/* Dashboard Tabs */}
-        <div style={{ marginBottom: "30px" }}>
-          <div style={{ 
-            display: "flex", 
-            borderBottom: "1px solid var(--border-color)",
-            overflow: "auto",
-            whiteSpace: "nowrap"
-          }}>
-            <button
-              onClick={() => setActiveTab("books")}
-              style={{
-                padding: "15px 25px",
-                backgroundColor: "transparent",
-                border: "none",
-                borderBottom: activeTab === "books" ? "3px solid var(--primary-color)" : "3px solid transparent",
-                color: activeTab === "books" ? "var(--primary-color)" : "var(--light-text)",
-                fontWeight: activeTab === "books" ? "600" : "400",
-                cursor: "pointer",
-                fontSize: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <FaBook />
-              Manage Book Prices
-            </button>
-            <button
-              onClick={() => setActiveTab("discounts")}
-              style={{
-                padding: "15px 25px",
-                backgroundColor: "transparent",
-                border: "none",
-                borderBottom: activeTab === "discounts" ? "3px solid var(--primary-color)" : "3px solid transparent",
-                color: activeTab === "discounts" ? "var(--primary-color)" : "var(--light-text)",
-                fontWeight: activeTab === "discounts" ? "600" : "400",
-                cursor: "pointer",
-                fontSize: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <FaPercent />
-              Apply Discounts
-            </button>
-            <button
-              onClick={() => setActiveTab("orders")}
-              style={{
-                padding: "15px 25px",
-                backgroundColor: "transparent",
-                border: "none",
-                borderBottom: activeTab === "orders" ? "3px solid var(--primary-color)" : "3px solid transparent",
-                color: activeTab === "orders" ? "var(--primary-color)" : "var(--light-text)",
-                fontWeight: activeTab === "orders" ? "600" : "400",
-                cursor: "pointer",
-                fontSize: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <FaFileInvoiceDollar />
-              View Invoices
-            </button>
-            <button
-              onClick={() => setActiveTab("analytics")}
-              style={{
-                padding: "15px 25px",
-                backgroundColor: "transparent",
-                border: "none",
-                borderBottom: activeTab === "analytics" ? "3px solid var(--primary-color)" : "3px solid transparent",
-                color: activeTab === "analytics" ? "var(--primary-color)" : "var(--light-text)",
-                fontWeight: activeTab === "analytics" ? "600" : "400",
-                cursor: "pointer",
-                fontSize: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <FaChartLine />
-              Sales Analytics
-            </button>
+        <div style={{ display: "flex", borderBottom: "1px solid var(--border-color)", marginBottom: "30px" }}>
+          <div 
+            onClick={() => setActiveTab("books")} 
+            style={{
+              padding: "15px 20px",
+              cursor: "pointer",
+              borderBottom: activeTab === "books" ? "3px solid var(--primary-color)" : "3px solid transparent",
+              color: activeTab === "books" ? "var(--primary-color)" : "var(--light-text)",
+              fontWeight: activeTab === "books" ? "600" : "400",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <FaBook style={{ marginRight: "8px" }} />
+            Price Management
+          </div>
+          
+          <div 
+            onClick={() => setActiveTab("discounts")} 
+            style={{
+              padding: "15px 20px",
+              cursor: "pointer",
+              borderBottom: activeTab === "discounts" ? "3px solid var(--primary-color)" : "3px solid transparent",
+              color: activeTab === "discounts" ? "var(--primary-color)" : "var(--light-text)",
+              fontWeight: activeTab === "discounts" ? "600" : "400",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <FaPercent style={{ marginRight: "8px" }} />
+            Discounts
+          </div>
+          
+          <div 
+            onClick={() => setActiveTab("orders")} 
+            style={{
+              padding: "15px 20px",
+              cursor: "pointer",
+              borderBottom: activeTab === "orders" ? "3px solid var(--primary-color)" : "3px solid transparent",
+              color: activeTab === "orders" ? "var(--primary-color)" : "var(--light-text)",
+              fontWeight: activeTab === "orders" ? "600" : "400",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <FaFileInvoiceDollar style={{ marginRight: "8px" }} />
+            View Invoices
+          </div>
+          
+          <div 
+            onClick={() => setActiveTab("refunds")} 
+            style={{
+              padding: "15px 20px",
+              cursor: "pointer",
+              borderBottom: activeTab === "refunds" ? "3px solid var(--primary-color)" : "3px solid transparent",
+              color: activeTab === "refunds" ? "var(--primary-color)" : "var(--light-text)",
+              fontWeight: activeTab === "refunds" ? "600" : "400",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <FaUndo style={{ marginRight: "8px" }} />
+            Refund Requests
+          </div>
+          
+          <div 
+            onClick={() => setActiveTab("analytics")} 
+            style={{
+              padding: "15px 20px",
+              cursor: "pointer",
+              borderBottom: activeTab === "analytics" ? "3px solid var(--primary-color)" : "3px solid transparent",
+              color: activeTab === "analytics" ? "var(--primary-color)" : "var(--light-text)",
+              fontWeight: activeTab === "analytics" ? "600" : "400",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <FaChartBar style={{ marginRight: "8px" }} />
+            Sales Analytics
           </div>
         </div>
         
         {loading ? (
-          <div style={{ textAlign: "center", padding: "50px 0" }}>
+          <div style={{ 
+            textAlign: "center", 
+            padding: "40px",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          }}>
             <p>Loading data...</p>
           </div>
         ) : error ? (
-          <div style={{
-            padding: "20px",
-            backgroundColor: "#ffebee",
+          <div style={{ 
+            textAlign: "center", 
+            padding: "40px",
+            backgroundColor: "white",
             borderRadius: "8px",
-            color: "#c62828",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px"
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            color: "#f44336"
           }}>
-            <FaExclamationTriangle size={24} />
-            <p style={{ margin: 0 }}>{error}</p>
+            <p>{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "var(--primary-color)",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                marginTop: "15px"
+              }}
+            >
+              Retry
+            </button>
           </div>
         ) : activeTab === "books" ? (
           <div style={{
@@ -1504,12 +1674,15 @@ const SalesManagerDashboard = () => {
                       
                       <div style={{ maxHeight: "250px", overflowY: "auto" }}>
                         {order.items && order.items.map((item, index) => (
-                          <div key={index} style={{
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "10px 0",
-                            borderBottom: index < order.items.length - 1 ? "1px solid #eee" : "none"
-                          }}>
+                          <div 
+                            key={index}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              padding: "10px 0",
+                              borderBottom: index < order.items.length - 1 ? "1px solid #eee" : "none"
+                            }}
+                          >
                             <div style={{ width: "50px", height: "70px", marginRight: "15px" }}>
                               {item.image ? (
                                 <img 
@@ -1570,7 +1743,297 @@ const SalesManagerDashboard = () => {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === "refunds" ? (
+          <div style={{ 
+            backgroundColor: "white",
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            overflow: "hidden" 
+          }}>
+            <div style={{ padding: "20px" }}>
+              <h2 style={{ 
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "1.8rem",
+                color: "var(--primary-color)",
+                marginTop: "0",
+                marginBottom: "20px"
+              }}>
+                Manage Refund Requests
+              </h2>
+              
+              <p style={{ color: "var(--light-text)", marginBottom: "20px" }}>
+                Review and process customer refund requests. Approve or reject requests and determine refund amounts.
+              </p>
+              
+              {/* Search */}
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center",
+                marginBottom: "20px",
+                backgroundColor: "#f5f5f5",
+                borderRadius: "4px",
+                padding: "5px 15px"
+              }}>
+                <FaSearch style={{ color: "var(--light-text)", marginRight: "10px" }} />
+                <input 
+                  type="text"
+                  placeholder="Search by order ID, customer name or email..."
+                  value={refundSearch}
+                  onChange={(e) => handleRefundSearch(e.target.value)}
+                  style={{
+                    border: "none",
+                    outline: "none",
+                    padding: "10px 0",
+                    width: "100%",
+                    backgroundColor: "transparent"
+                  }}
+                />
+              </div>
+              
+              {filteredRefundRequests.length === 0 ? (
+                <div style={{ 
+                  padding: "40px", 
+                  textAlign: "center",
+                  borderRadius: "4px",
+                  backgroundColor: "#f8f9fa",
+                  marginBottom: "20px"
+                }}>
+                  <FaUndo style={{ fontSize: "48px", color: "#bdbdbd", marginBottom: "15px" }} />
+                  <h3 style={{ margin: "0 0 10px", fontWeight: "500", color: "var(--primary-color)" }}>
+                    No Refund Requests
+                  </h3>
+                  <p style={{ color: "var(--light-text)" }}>
+                    There are currently no pending refund requests to process.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  {filteredRefundRequests.map((order) => (
+                    <div 
+                      key={order._id}
+                      style={{ 
+                        border: "1px solid var(--border-color)",
+                        borderRadius: "8px",
+                        marginBottom: "20px",
+                        overflow: "hidden"
+                      }}
+                    >
+                      {/* Order header */}
+                      <div style={{ 
+                        padding: "15px 20px",
+                        backgroundColor: "#fff8e1",
+                        borderBottom: "1px solid var(--border-color)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap"
+                      }}>
+                        <div>
+                          <h3 style={{ margin: "0 0 5px", fontWeight: "500" }}>
+                            Order #{order.orderId || order._id}
+                          </h3>
+                          <p style={{ margin: "0", color: "var(--light-text)", fontSize: "0.9rem" }}>
+                            Requested on {new Date(order.refundRequest?.requestedAt || order.updatedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div style={{ 
+                          padding: "8px 15px",
+                          backgroundColor: "#ff9800",
+                          color: "white",
+                          borderRadius: "20px",
+                          fontSize: "0.8rem",
+                          fontWeight: "500"
+                        }}>
+                          Refund Requested
+                        </div>
+                      </div>
+                      
+                      {/* Order details */}
+                      <div style={{ padding: "20px" }}>
+                        {/* Customer info */}
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ margin: "0 0 10px", fontWeight: "500", color: "var(--primary-color)" }}>
+                            Customer Information
+                          </h4>
+                          <p style={{ margin: "0 0 5px" }}>
+                            <strong>Name:</strong> {order.shippingInfo?.name || "N/A"}
+                          </p>
+                          <p style={{ margin: "0 0 5px" }}>
+                            <strong>Email:</strong> {order.shippingInfo?.email || "N/A"}
+                          </p>
+                          <p style={{ margin: "0" }}>
+                            <strong>Phone:</strong> {order.shippingInfo?.phone || "N/A"}
+                          </p>
+                        </div>
+                        
+                        {/* Order items */}
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ margin: "0 0 10px", fontWeight: "500", color: "var(--primary-color)" }}>
+                            Order Items
+                          </h4>
+                          <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                            {order.items.map((item, index) => (
+                              <div 
+                                key={index}
+                                style={{
+                                  display: "flex",
+                                  padding: "10px 0",
+                                  borderBottom: index < order.items.length - 1 ? "1px solid #eee" : "none"
+                                }}
+                              >
+                                <img 
+                                  src={item.image}
+                                  alt={item.title}
+                                  style={{
+                                    width: "40px",
+                                    height: "60px",
+                                    objectFit: "cover",
+                                    marginRight: "15px"
+                                  }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <p style={{ margin: "0 0 5px", fontWeight: "500" }}>
+                                    {item.title}
+                                  </p>
+                                  <p style={{ margin: "0", color: "var(--light-text)", fontSize: "0.9rem" }}>
+                                    Qty: {item.quantity} × ${item.price}
+                                  </p>
+                                </div>
+                                <div style={{ fontWeight: "500" }}>
+                                  ${(item.quantity * item.price).toFixed(2)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Refund reason */}
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ margin: "0 0 10px", fontWeight: "500", color: "var(--primary-color)" }}>
+                            Refund Reason
+                          </h4>
+                          <div style={{ 
+                            padding: "15px",
+                            backgroundColor: "#f5f5f5",
+                            borderRadius: "4px",
+                            fontStyle: "italic",
+                            color: "#555"
+                          }}>
+                            "{order.refundRequest?.reason || "No reason provided"}"
+                          </div>
+                        </div>
+                        
+                        {/* Order total */}
+                        <div style={{ 
+                          display: "flex", 
+                          justifyContent: "space-between",
+                          padding: "15px 0",
+                          borderTop: "1px solid var(--border-color)",
+                          marginBottom: "20px"
+                        }}>
+                          <span style={{ fontWeight: "500", fontSize: "1.1rem" }}>Order Total:</span>
+                          <span style={{ fontWeight: "600", fontSize: "1.1rem", color: "var(--primary-color)" }}>
+                            ${order.total.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Refund amount input */}
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ margin: "0 0 10px", fontWeight: "500", color: "var(--primary-color)" }}>
+                            Refund Amount
+                          </h4>
+                          <input 
+                            type="number"
+                            value={refundAmounts[order._id] || order.total}
+                            onChange={(e) => handleRefundAmountChange(order._id, e.target.value)}
+                            min="0"
+                            max={order.total}
+                            step="0.01"
+                            style={{
+                              width: "100%",
+                              padding: "12px 15px",
+                              border: "1px solid var(--border-color)",
+                              borderRadius: "4px",
+                              fontSize: "1rem"
+                            }}
+                          />
+                          <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "var(--light-text)" }}>
+                            The maximum refund amount is ${order.total.toFixed(2)}
+                          </p>
+                        </div>
+                        
+                        {/* Notes input */}
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ margin: "0 0 10px", fontWeight: "500", color: "var(--primary-color)" }}>
+                            Processing Notes (Optional)
+                          </h4>
+                          <textarea 
+                            value={refundNotes[order._id] || ''}
+                            onChange={(e) => handleRefundNotesChange(order._id, e.target.value)}
+                            placeholder="Add notes about this refund (will be visible to the customer)"
+                            style={{
+                              width: "100%",
+                              padding: "12px 15px",
+                              border: "1px solid var(--border-color)",
+                              borderRadius: "4px",
+                              minHeight: "100px",
+                              resize: "vertical",
+                              fontSize: "1rem"
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Action buttons */}
+                        <div style={{ 
+                          display: "flex", 
+                          justifyContent: "flex-end",
+                          gap: "15px"
+                        }}>
+                          <button
+                            onClick={() => handleProcessRefund(order._id, false)}
+                            disabled={processingRefund}
+                            style={{
+                              padding: "12px 20px",
+                              backgroundColor: "#f44336",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: processingRefund ? "not-allowed" : "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              opacity: processingRefund ? 0.7 : 1
+                            }}
+                          >
+                            <FaTimesCircle style={{ marginRight: "8px" }} />
+                            Reject Refund
+                          </button>
+                          <button
+                            onClick={() => handleProcessRefund(order._id, true)}
+                            disabled={processingRefund}
+                            style={{
+                              padding: "12px 20px",
+                              backgroundColor: "#4caf50",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: processingRefund ? "not-allowed" : "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              opacity: processingRefund ? 0.7 : 1
+                            }}
+                          >
+                            <FaCheckCircle style={{ marginRight: "8px" }} />
+                            Approve Refund
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : activeTab === "analytics" ? (
           <div style={{
             backgroundColor: "white",
             borderRadius: "8px",
@@ -2043,7 +2506,7 @@ const SalesManagerDashboard = () => {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
       
       <Footer />
