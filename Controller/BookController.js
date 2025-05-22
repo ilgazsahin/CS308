@@ -362,6 +362,28 @@ router.put("/:id", async (req, res) => {
     }
 });
 
+// Delete a book by ID
+router.delete("/:id", async (req, res) => {
+    try {
+        console.log(`Attempting to delete book with ID: ${req.params.id}`);
+        const deletedBook = await BookModel.findByIdAndDelete(req.params.id);
+        
+        if (!deletedBook) {
+            console.log(`Book with ID ${req.params.id} not found`);
+            return res.status(404).json({ message: "Book not found" });
+        }
+        
+        console.log(`Book deleted successfully: ${deletedBook.title}`);
+        res.json({ 
+            message: "Book deleted successfully", 
+            book: deletedBook 
+        });
+    } catch (err) {
+        console.error(`Error deleting book: ${err.message}`);
+        res.status(500).json({ message: "Error deleting book", error: err.message });
+    }
+});
+
 // Update book stock quantity
 router.patch("/:id/stock", async (req, res) => {
     try {
