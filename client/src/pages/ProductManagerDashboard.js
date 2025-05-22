@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import NavigationBar from "./HomePage/NavigationBar";
 import Footer from "../components/Footer";
-import { FaBook, FaPlus, FaEdit, FaTrash, FaExclamationTriangle, FaTags, FaBoxes, FaTruck, FaTh, FaComments, FaCheck, FaTimes } from "react-icons/fa";
+import { FaBook, FaPlus, FaEdit, FaTrash, FaExclamationTriangle, FaTags, FaBoxes, FaTruck, FaTh, FaComments, FaCheck, FaTimes, FaFileInvoiceDollar } from "react-icons/fa";
 import axios from "axios";
 
 const ProductManagerDashboard = () => {
@@ -24,6 +24,9 @@ const ProductManagerDashboard = () => {
   
   // State for status filter
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  // State for invoice filter
+  const [invoiceFilter, setInvoiceFilter] = useState("all");
   
   // Check if user is authorized
   useEffect(() => {
@@ -265,6 +268,8 @@ const ProductManagerDashboard = () => {
         return renderStockTab();
       case "delivery":
         return renderDeliveryTab();
+      case "invoice":
+        return renderInvoiceTab();
       case "comments":
         return renderCommentsTab();
       default:
@@ -702,6 +707,12 @@ const ProductManagerDashboard = () => {
                         minute: '2-digit'
                       })}
                     </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                      <strong>Order ID:</strong> {order._id}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                      <strong>Customer ID:</strong> {order.userId}
+                    </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <span style={{
@@ -808,6 +819,257 @@ const ProductManagerDashboard = () => {
                           <p style={{ margin: "0", fontWeight: "500" }}>{item.title}</p>
                           <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
                             {item.author || "Unknown Author"}
+                          </p>
+                          <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                            <strong>Product ID:</strong> {item._id}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: "right", marginLeft: "20px" }}>
+                          <p style={{ margin: "0", fontWeight: "500" }}>Qty: {item.quantity}</p>
+                          <p style={{ margin: "5px 0 0", fontSize: "0.9rem" }}>
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div style={{ 
+                    marginTop: "20px", 
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    padding: "15px 0 0",
+                    borderTop: "1px solid var(--border-color)"
+                  }}>
+                    <p style={{ margin: "0", fontSize: "1.1rem", fontWeight: "700" }}>
+                      Total: ${order.total.toFixed(2)}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.8rem", color: "#757575", textAlign: "right" }}>
+                      {order.items?.length || 0} {order.items?.length === 1 ? "item" : "items"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Invoice management tab content
+  const renderInvoiceTab = () => {
+    // Filter orders based on status filter
+    const filteredOrders = invoiceFilter === "all" 
+      ? orders 
+      : orders.filter(order => order.status?.toLowerCase() === invoiceFilter);
+    
+    // Get status display style
+    const getStatusStyle = (status) => {
+      switch(status?.toLowerCase()) {
+        case "processing":
+          return {
+            backgroundColor: "#e1f5fe",
+            color: "#0277bd"
+          };
+        case "in-transit":
+          return {
+            backgroundColor: "#e8f5e9",
+            color: "#2e7d32"
+          };
+        case "delivered":
+          return {
+            backgroundColor: "#e0f2f1",
+            color: "#00796b"
+          };
+        default:
+          return {
+            backgroundColor: "#f5f5f5",
+            color: "#757575"
+          };
+      }
+    };
+    
+    return (
+      <div style={{
+        backgroundColor: "white",
+        borderRadius: "8px",
+        padding: "30px",
+        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
+      }}>
+        <h2 style={{
+          fontSize: "1.5rem",
+          marginBottom: "20px",
+          color: "var(--primary-color)",
+          display: "flex",
+          alignItems: "center"
+        }}>
+          <FaFileInvoiceDollar style={{ marginRight: "10px" }} />
+          Invoice Management
+        </h2>
+        
+        <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={{ color: "#757575", fontSize: "0.9rem", margin: 0 }}>
+            <strong>Note:</strong> View order invoices and detailed information.
+          </p>
+          
+          {/* Status filter */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <label style={{ marginRight: "10px", color: "#757575" }}>Filter by status:</label>
+            <select
+              value={invoiceFilter}
+              onChange={(e) => setInvoiceFilter(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid var(--border-color)",
+                borderRadius: "4px",
+                fontSize: "0.9rem"
+              }}
+            >
+              <option value="all">All Orders</option>
+              <option value="processing">Processing</option>
+              <option value="in-transit">In Transit</option>
+              <option value="delivered">Delivered</option>
+            </select>
+          </div>
+        </div>
+        
+        {filteredOrders.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 0", color: "#757575" }}>
+            No orders found matching the selected filter.
+          </div>
+        ) : (
+          <div>
+            {filteredOrders.map((order) => (
+              <div key={order._id} style={{
+                marginBottom: "30px",
+                border: "1px solid var(--border-color)",
+                borderRadius: "8px",
+                overflow: "hidden"
+              }}>
+                {/* Order Header */}
+                <div style={{
+                  padding: "15px 20px",
+                  backgroundColor: "#f5f5f5",
+                  borderBottom: "1px solid var(--border-color)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "500" }}>
+                      Order #{order._id.substring(order._id.length - 6)}
+                    </h3>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                      {new Date(order.orderDate).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                      <strong>Order ID:</strong> {order._id}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                      <strong>Customer ID:</strong> {order.userId}
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{
+                      display: "inline-block",
+                      padding: "6px 12px",
+                      borderRadius: "50px",
+                      ...getStatusStyle(order.status),
+                      fontWeight: "500",
+                      fontSize: "0.8rem",
+                      textTransform: "capitalize"
+                    }}>
+                      {order.status}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Customer Info */}
+                <div style={{
+                  padding: "15px 20px",
+                  borderBottom: "1px solid var(--border-color)",
+                  display: "flex"
+                }}>
+                  <div style={{ flex: "1" }}>
+                    <h4 style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: "500", color: "#757575" }}>
+                      Customer
+                    </h4>
+                    <p style={{ margin: "0", fontWeight: "500" }}>
+                      {order.shippingInfo?.name || "N/A"}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem" }}>
+                      {order.shippingInfo?.email || "No email provided"}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem" }}>
+                      {order.shippingInfo?.phone || "No phone provided"}
+                    </p>
+                  </div>
+                  <div style={{ flex: "2" }}>
+                    <h4 style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: "500", color: "#757575" }}>
+                      Shipping Address
+                    </h4>
+                    <p style={{ margin: "0", fontWeight: "500" }}>
+                      {order.shippingInfo?.address || "No address provided"}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem" }}>
+                      {order.shippingInfo?.city || ""}{order.shippingInfo?.city && order.shippingInfo?.state ? ", " : ""}{order.shippingInfo?.state || ""} {order.shippingInfo?.zip || ""}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: "0.9rem" }}>
+                      {order.shippingInfo?.country || ""}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Order Items */}
+                <div style={{ padding: "15px 20px" }}>
+                  <h4 style={{ margin: "0 0 15px", fontSize: "0.9rem", fontWeight: "500", color: "#757575" }}>
+                    Order Items
+                  </h4>
+                  
+                  <div style={{ maxHeight: "250px", overflowY: "auto" }}>
+                    {order.items && order.items.map((item, index) => (
+                      <div key={index} style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "10px 0",
+                        borderBottom: index < order.items.length - 1 ? "1px solid #eee" : "none"
+                      }}>
+                        <div style={{ width: "50px", height: "70px", marginRight: "15px" }}>
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.title} 
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                            />
+                          ) : (
+                            <div style={{ 
+                              width: "100%", 
+                              height: "100%", 
+                              backgroundColor: "#f5f5f5",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#bdbdbd"
+                            }}>
+                              <FaBook />
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ flex: "1" }}>
+                          <p style={{ margin: "0", fontWeight: "500" }}>{item.title}</p>
+                          <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                            {item.author || "Unknown Author"}
+                          </p>
+                          <p style={{ margin: "5px 0 0", fontSize: "0.9rem", color: "#757575" }}>
+                            <strong>Product ID:</strong> {item._id}
                           </p>
                         </div>
                         <div style={{ textAlign: "right", marginLeft: "20px" }}>
@@ -1261,6 +1523,27 @@ const ProductManagerDashboard = () => {
           >
             <FaTruck size={14} />
             Delivery
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("invoice")}
+            style={{
+              padding: "12px 20px",
+              backgroundColor: activeTab === "invoice" ? "white" : "transparent",
+              border: activeTab === "invoice" ? "1px solid var(--border-color)" : "none",
+              borderBottom: activeTab === "invoice" ? "1px solid white" : "none",
+              borderRadius: activeTab === "invoice" ? "4px 4px 0 0" : "0",
+              marginBottom: activeTab === "invoice" ? "-1px" : "0",
+              cursor: "pointer",
+              fontWeight: activeTab === "invoice" ? "500" : "400",
+              color: activeTab === "invoice" ? "var(--primary-color)" : "var(--text-color)",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}
+          >
+            <FaFileInvoiceDollar size={14} />
+            Invoice
           </button>
           
           <button
