@@ -12,10 +12,5 @@ module.exports = {
     setupFiles: ['<rootDir>/jest.setup.js'],
 
     // 4) run in node (no DOM)
-<<<<<<< HEAD
     testEnvironment: 'node'
 };
-=======
-    testEnvironment: 'node'
-};
->>>>>>> 2e33bb2e9cd1b0023e99a8482cf83b13cdcebc28

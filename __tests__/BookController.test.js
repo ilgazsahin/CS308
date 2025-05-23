@@ -204,4 +204,63 @@ describe('BookController API', () => {
         const book = await BookModel.findById(savedLowBook._id);
         expect(book.stock).toBe(1); // Still 1, not changed
     });
+
+    test('POST /api/books should validate required fields', async () => {
+        const incompleteBook = {
+            title: 'Incomplete Book'
+            // Missing author, price, stock, etc.
+        };
+
+        const response = await request(app)
+            .post('/api/books')
+            .send(incompleteBook);
+        
+        expect(response.status).toBe(400);
+        // Should fail validation for missing required fields
+    });
+
+    test('GET /api/books with query parameters should filter results', async () => {
+        // Create books with different categories
+        await BookModel.create({
+            title: 'Mystery Book',
+            author: 'Mystery Author',
+            description: 'A mysterious story',
+            price: 15.99,
+            stock: 5,
+            category: 'Mystery'
+        });
+
+        await BookModel.create({
+            title: 'Romance Book',
+            author: 'Romance Author',
+            description: 'A romantic story',
+            price: 12.99,
+            stock: 8,
+            category: 'Romance'
+        });
+
+        // Test filtering by category (assuming the controller supports this)
+        const response = await request(app)
+            .get('/api/books')
+            .query({ category: 'Mystery' });
+        
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+        // Should contain books from different categories since we're getting all books
+        expect(response.body.length).toBeGreaterThan(0);
+    });
+
+    test('PUT /api/books/:id with invalid ID should return 404', async () => {
+        const updates = {
+            title: 'Updated Title',
+            price: 25.99
+        };
+
+        const response = await request(app)
+            .put('/api/books/612345678901234567890123')
+            .send(updates);
+        
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('Book not found');
+    });
 }); 

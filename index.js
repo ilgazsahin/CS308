@@ -14,7 +14,7 @@ const CommentController = require("./Controller/CommentController");
 const OrderController = require("./Controller/OrderController");
 const RatingController = require("./Controller/RatingController");
 const CartController = require("./Controller/CartController");
-const WishlistController = require("./Controller/wishListController");
+const WishlistController = require("./Controller/WishListController");
 const CategoryController = require("./Controller/CategoryController");
 
 // Import the simplified email service
@@ -29,7 +29,7 @@ app.use(express.json());
 app.use(cors());
 
 /* ---------- MongoDB Connection ---------- */
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })

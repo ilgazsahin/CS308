@@ -205,4 +205,62 @@ describe('OrderModel', () => {
         const fetchedOrder = await OrderModel.findById(order._id);
         expect(fetchedOrder.status).toBe('in-transit');
     });
+
+    test('should validate shipping information structure', async () => {
+        const orderWithShipping = {
+            orderId: 12351,
+            orderNumber: 1007,
+            userId: 'user123',
+            items: [{ _id: 'book1', title: 'Book', author: 'Author', price: 19.99, quantity: 1 }],
+            shippingInfo: {
+                name: 'John Smith',
+                email: 'john.smith@example.com',
+                address: '456 Shipping St',
+                city: 'Ship City',
+                state: 'SC',
+                zip: '54321',
+                country: 'Turkey'
+            },
+            totalAmount: 19.99,
+            total: 19.99,
+            status: 'processing'
+        };
+
+        const order = await OrderModel.create(orderWithShipping);
+        
+        expect(order.shippingInfo.name).toBe('John Smith');
+        expect(order.shippingInfo.email).toBe('john.smith@example.com');
+        expect(order.shippingInfo.address).toBe('456 Shipping St');
+        expect(order.shippingInfo.city).toBe('Ship City');
+        expect(order.shippingInfo.country).toBe('Turkey');
+    });
+
+    test('should handle orders with multiple items and calculate totals', async () => {
+        const multiItemOrder = {
+            orderId: 12352,
+            orderNumber: 1008,
+            userId: 'user123',
+            items: [
+                { _id: 'book1', title: 'Book 1', author: 'Author 1', price: 15.99, quantity: 2 },
+                { _id: 'book2', title: 'Book 2', author: 'Author 2', price: 24.99, quantity: 1 },
+                { _id: 'book3', title: 'Book 3', author: 'Author 3', price: 9.99, quantity: 3 }
+            ],
+            totalAmount: 86.95, // (15.99*2) + (24.99*1) + (9.99*3)
+            total: 86.95,
+            status: 'processing'
+        };
+
+        const order = await OrderModel.create(multiItemOrder);
+        
+        expect(order.items.length).toBe(3);
+        expect(order.total).toBe(86.95);
+        expect(order.items[0].quantity).toBe(2);
+        expect(order.items[1].quantity).toBe(1);
+        expect(order.items[2].quantity).toBe(3);
+        
+        // Verify item details
+        expect(order.items[0].title).toBe('Book 1');
+        expect(order.items[1].price).toBe(24.99);
+        expect(order.items[2].price).toBe(9.99);
+    });
 }); 

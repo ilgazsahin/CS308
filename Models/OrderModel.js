@@ -40,12 +40,25 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    /** The only values your React dropdown offers */
+    /** Updated enum with cancelled and refund related statuses */
     status: {
         type: String,
-        enum: ['processing', 'in-transit', 'delivered'],
+        enum: ['processing', 'in-transit', 'delivered', 'cancelled', 'refund-requested', 'refunded'],
         default: 'processing',
         lowercase: true       // guarantees stored values are lower-case
+    },
+    refundRequest: {
+        requestedAt: Date,
+        reason: String,
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        processedAt: Date,
+        processedBy: String, // Sales Manager's userId
+        refundAmount: Number,
+        notes: String
     }
 }, { timestamps: true });
 

@@ -4,7 +4,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "jest --runInBand",
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "docker-check": "node docker-check.js",
+    "docker-build": "docker-compose build",
+    "docker-up": "docker-compose up -d",
+    "docker-down": "docker-compose down",
     "test:backend": "jest --runInBand __tests__/BookModel.test.js __tests__/OrderModel.test.js __tests__/CartController.test.js __tests__/UserModel.test.js __tests__/BookController.test.js"
   },
   "keywords": [],

@@ -56,4 +56,29 @@ describe('UserModel', () => {
         expect(user.email).toBe('456');
         expect(user.password).toBe('789');
     });
+
+    test('should handle user with all optional fields', async () => {
+        const completeUserData = {
+            name: 'Complete User',
+            email: 'complete@example.com',
+            password: 'securePassword123',
+            userType: 'customer',
+            address: '789 Complete Ave'
+        };
+
+        const user = await UserModel.create(completeUserData);
+        
+        expect(user._id).toBeDefined();
+        expect(user.name).toBe(completeUserData.name);
+        expect(user.email).toBe(completeUserData.email);
+        expect(user.password).toBe(completeUserData.password);
+        expect(user.userType).toBe(completeUserData.userType);
+        expect(user.address).toBe(completeUserData.address);
+
+        // Verify it can be retrieved from database
+        const foundUser = await UserModel.findById(user._id);
+        expect(foundUser).not.toBeNull();
+        expect(foundUser.email).toBe(completeUserData.email);
+        expect(foundUser.userType).toBe(completeUserData.userType);
+    });
 });

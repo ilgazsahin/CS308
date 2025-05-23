@@ -1,6 +1,6 @@
 // __tests__/CartContext.test.js
 import React from 'react';
-import { render, act, screen, waitFor } from '@testing-library/react';
+import { render, act, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import { CartProvider, useCart } from '../client/src/components/CartContext';
@@ -236,5 +236,54 @@ describe('CartContext', () => {
         ])
       })
     );
+  });
+
+  test('should handle cart item quantity updates correctly', async () => {
+    const TestCartComponent = () => {
+      const { cartItems, addToCart, updateQuantity, getCartTotal } = useCart();
+      
+      return (
+        <div>
+          <div data-testid="cart-count">{cartItems.length}</div>
+          <div data-testid="cart-total">Total: ${getCartTotal().toFixed(2)}</div>
+          <button onClick={() => addToCart({
+            _id: '1',
+            title: 'Test Book',
+            author: 'Test Author',
+            price: 20.00,
+            image: 'test.jpg'
+          })}>
+            Add Book
+          </button>
+          <button onClick={() => updateQuantity('1', 3)}>
+            Update Quantity
+          </button>
+          {cartItems.map(item => (
+            <div key={item._id} data-testid={`item-${item._id}`}>
+              {item.title} - Qty: {item.quantity} - ${(item.price * item.quantity).toFixed(2)}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    render(
+      <CartProvider>
+        <TestCartComponent />
+      </CartProvider>
+    );
+
+    // Initially empty cart
+    expect(screen.getByTestId('cart-count')).toHaveTextContent('0');
+    
+    // Add item
+    fireEvent.click(screen.getByText('Add Book'));
+    expect(screen.getByTestId('cart-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('Total: $20.00');
+    
+    // Update quantity
+    fireEvent.click(screen.getByText('Update Quantity'));
+    expect(screen.getByTestId('item-1')).toHaveTextContent('Test Book - Qty: 3 - $60.00');
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('Total: $60.00');
   });
 }); 
